@@ -1,0 +1,94 @@
+# Runtime settings.
+[run]
+# Inclusive analysis start date in YYYY-MM-DD format.
+start_date = "2019-01-01"
+# Inclusive analysis end date in YYYY-MM-DD format.
+end_date = "2023-12-31"
+# Folder, relative to this config file, that stores generated artifacts.
+output_dir = "outputs/runs"
+# Random seed used for stochastic model components.
+seed = 11
+
+# Raw data input settings.
+[raw_data]
+# Required tracked raw-data folder used by the default offline path.
+raw_dir = "data/raw"
+# Parquet discovery pattern under raw_dir.
+file_pattern = "*.parquet"
+# Source timezone convention for `ts`. Expected value is "UTC".
+timezone = "UTC"
+# Restrict preprocessing to regular US session (09:30-16:00 New York).
+regular_session_only = true
+
+# Portfolio symbols for the bounded interview demo universe.
+[portfolio]
+# Ordered symbol list used for per-asset modeling and equal-weight portfolio.
+symbols = ["AAPL", "JPM", "TSLA", "SPY"]
+
+# Realized variance settings.
+[realized_variance]
+# Trading days per year used for annualized variance conventions.
+annualization_days = 252
+
+# Rolling backtest settings.
+[backtest]
+# Number of trailing daily returns passed into each model fit.
+calibration_window = 1150
+# Left-tail probabilities for VaR evaluation.
+alphas = [0.05, 0.01]
+
+# Evaluation and summary settings.
+[evaluation]
+# Confidence level used when labeling one-sided ES backtest outcomes.
+es_backtest_confidence = 0.95
+
+[[evaluation.periods]]
+name = "full"
+start_date = "2019-01-01"
+end_date = "2023-12-31"
+
+[[evaluation.periods]]
+name = "covid"
+start_date = "2020-02-15"
+end_date = "2020-04-30"
+
+[[evaluation.periods]]
+name = "rate_shock"
+start_date = "2022-01-01"
+end_date = "2022-10-31"
+
+[[evaluation.periods]]
+name = "post_covid"
+start_date = "2020-05-01"
+end_date = "2021-12-31"
+
+# Feature-building settings.
+[features]
+# Include 5-day realized return volatility feature if true.
+include_realized_return_volatility_5d = true
+
+# Historical simulation settings.
+[historical]
+# Number of trailing returns used for empirical quantiles.
+window = 250
+
+# GARCH settings.
+[garch]
+# ARCH lag order.
+p = 1
+# GARCH lag order.
+q = 1
+
+# Filtered historical simulation settings.
+[filtered_historical]
+# Number of one-day return draws per forecast.
+simulations = 10000
+
+# Adaptive conformal settings.
+[conformal]
+# Number of trailing returns used to build calibration residuals.
+window = 500
+# Rolling-mean lookback used by the base predictor.
+mean_window = 20
+# Learning rate for adaptive alpha updates.
+learning_rate = 0.005

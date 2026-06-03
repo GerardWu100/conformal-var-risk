@@ -1,0 +1,45 @@
+.env
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Generated pipeline parquet artifacts should stay local.
+outputs/**/*.parquet
+outputs/**/*.meta.json
+outputs/**/*.html
+
+# Keep tracked raw parquet under data/raw allowed.
+!data/raw/
+!data/raw/*.parquet
+!data/raw/README.md
+
+# Ignore local notebook checkpoints.
+.ipynb_checkpoints/
+
+# Local secrets, credentials, and machine-specific state.
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.csr
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+credentials.json
+client_secret*.json
+secrets.json
+secrets.toml
+*.token
+*.secret
+.netrc
+.DS_Store
+.vscode/
+.idea/
+*.log
