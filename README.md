@@ -4,6 +4,10 @@ This project is an offline-first quantitative risk research pipeline for
 one-day-ahead lower-tail Value-at-Risk, abbreviated VaR, with Expected
 Shortfall, abbreviated ES, as a secondary diagnostic.
 
+The adaptive method uses the standard finite-sample conformal order-statistic
+rank, but the project does not claim classical finite-sample coverage for
+serially dependent equity returns. Coverage is evaluated out of sample.
+
 The repository is intentionally scoped as a resume project: small, linear, and
 interview-defensible. The full runtime starts from tracked raw parquet files,
 builds daily returns and realized variance, constructs a compact feature table,
@@ -15,6 +19,8 @@ runs a model comparison backtest, and finishes with a teaching notebook.
 - It makes data timing explicit to avoid lookahead bias.
 - It compares conformal and benchmark models on the same walk-forward protocol.
 - It keeps the model set narrow and explainable.
+- It reports exact binomial intervals so short-tail samples are not mistaken
+  for strong evidence.
 
 ## Offline Input Contract
 
@@ -42,6 +48,10 @@ The pipeline writes derived parquet artifacts under `outputs/runs/`:
 - `outputs/runs/feature_table.parquet`
 - `outputs/runs/backtest_results.parquet`
 - `outputs/runs/summary_metrics.parquet`
+
+Daily realized variance is stored in squared decimal-return units per day. The
+portfolio series is computed from synchronized equal-weight intraday portfolio
+returns, so it includes cross-asset covariance.
 
 ## Optional ClickHouse Refresh
 

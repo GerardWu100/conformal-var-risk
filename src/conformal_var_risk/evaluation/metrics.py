@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from scipy.stats import chi2, norm
+from scipy.stats import beta, chi2, norm
 
 from conformal_var_risk.config import EvaluationConfig
 
@@ -99,6 +99,14 @@ def _summarize_period(
         es_z2_statistic = acerbi_szekely_z2_statistic(group=group, alpha=float(alpha))
         es_z1_p_value = acerbi_szekely_z1_p_value(group=group)
         es_z2_p_value = acerbi_szekely_z2_p_value(group=group, alpha=float(alpha))
+        violation_count = int(violation_series.sum())
+        violation_rate_ci_lower, violation_rate_ci_upper = (
+            clopper_pearson_interval(
+                successes=violation_count,
+                trials=len(violation_series),
+                confidence_level=0.95,
+            )
+        )
         rows.append(
             {
                 "period": period_name,
@@ -106,8 +114,10 @@ def _summarize_period(
                 "model": model_name,
                 "alpha": float(alpha),
                 "observations": int(len(group)),
-                "violations": int(violation_series.sum()),
+                "violations": violation_count,
                 "violation_rate": float(violation_series.mean()),
+                "violation_rate_ci_95_lower": violation_rate_ci_lower,
+                "violation_rate_ci_95_upper": violation_rate_ci_upper,
                 "coverage_rate": float(1.0 - violation_series.mean()),
                 "avg_quantile_loss": float(
                     quantile_loss(
@@ -136,6 +146,60 @@ def _summarize_period(
             }
         )
     return pd.DataFrame(rows)
+
+
+def clopper_pearson_interval(
+    successes: int,
+    trials: int,
+    confidence_level: float,
+) -> tuple[float, float]:
+    """Return an exact two-sided binomial confidence interval.
+
+    Parameters
+    ----------
+    successes
+        Number of observed events, such as Value-at-Risk violations.
+    trials
+        Number of independent Bernoulli trials assumed by the interval.
+    confidence_level
+        Desired interval coverage in decimal units, for example ``0.95``.
+
+    Returns
+    -------
+    tuple[float, float]
+        Lower and upper event-probability bounds in decimal units.
+
+    Notes
+    -----
+    The interval quantifies binomial sampling uncertainty for one forecast
+    series. It should not be applied to pooled assets whose violations are
+    cross-sectionally dependent.
+    """
+    if trials <= 0:
+        raise ValueError("trials must be positive.")
+    if successes < 0 or successes > trials:
+        raise ValueError("successes must lie between zero and trials.")
+    if not 0.0 < confidence_level < 1.0:
+        raise ValueError("confidence_level must lie strictly between zero and one.")
+
+    tail_probability = (1.0 - confidence_level) / 2.0
+    lower = (
+        0.0
+        if successes == 0
+        else float(beta.ppf(tail_probability, successes, trials - successes + 1))
+    )
+    upper = (
+        1.0
+        if successes == trials
+        else float(
+            beta.ppf(
+                1.0 - tail_probability,
+                successes + 1,
+                trials - successes,
+            )
+        )
+    )
+    return lower, upper
 
 
 def quantile_loss(
@@ -228,7 +292,7 @@ def realized_tail_loss_mean(group: pd.DataFrame) -> float:
 def acerbi_szekely_z1_statistic(group: pd.DataFrame) -> float:
     """Compute the Acerbi-Szekely Z1 ES backtest statistic."""
     breach_frame = group.loc[group["violation"]].copy()
-    if breach_frame.empty:
+    if breach_frame.empty or (breach_frame["predicted_es"] <= 0.0).any():
         return np.nan
 
     breach_contributions = breach_frame["actual_return"] / breach_frame["predicted_es"]
@@ -237,6 +301,8 @@ def acerbi_szekely_z1_statistic(group: pd.DataFrame) -> float:
 
 def acerbi_szekely_z2_statistic(group: pd.DataFrame, alpha: float) -> float:
     """Compute the Acerbi-Szekely Z2 ES backtest statistic."""
+    if (group["predicted_es"] <= 0.0).any():
+        return np.nan
     scaled_tail_contributions = (
         group["actual_return"] * group["violation"].astype(float)
     ) / (alpha * group["predicted_es"])
@@ -246,7 +312,7 @@ def acerbi_szekely_z2_statistic(group: pd.DataFrame, alpha: float) -> float:
 def acerbi_szekely_z1_p_value(group: pd.DataFrame) -> float:
     """Approximate a one-sided p-value for the Z1 mean-zero null hypothesis."""
     breach_frame = group.loc[group["violation"]].copy()
-    if len(breach_frame) < 2:
+    if len(breach_frame) < 2 or (breach_frame["predicted_es"] <= 0.0).any():
         return np.nan
     z1_samples = breach_frame["actual_return"] / breach_frame["predicted_es"] + 1.0
     return one_sided_mean_zero_p_value(z1_samples.to_numpy(dtype=float))
@@ -254,6 +320,8 @@ def acerbi_szekely_z1_p_value(group: pd.DataFrame) -> float:
 
 def acerbi_szekely_z2_p_value(group: pd.DataFrame, alpha: float) -> float:
     """Approximate a one-sided p-value for the Z2 mean-zero null hypothesis."""
+    if (group["predicted_es"] <= 0.0).any():
+        return np.nan
     z2_samples = (group["actual_return"] * group["violation"].astype(float)) / (
         alpha * group["predicted_es"]
     ) + 1.0

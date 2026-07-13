@@ -6,7 +6,60 @@ import pandas as pd
 import pytest
 
 from conformal_var_risk.config import EvaluationConfig, EvaluationPeriodConfig
-from conformal_var_risk.evaluation.metrics import compute_summary_metrics
+from conformal_var_risk.evaluation.metrics import (
+    clopper_pearson_interval,
+    compute_summary_metrics,
+)
+
+
+def test_clopper_pearson_interval_quantifies_zero_breach_uncertainty() -> None:
+    """Zero events in 153 trials should still allow a nonzero event rate."""
+    lower, upper = clopper_pearson_interval(
+        successes=0,
+        trials=153,
+        confidence_level=0.95,
+    )
+
+    assert lower == 0.0
+    assert upper == pytest.approx(0.0238219913)
+
+
+def test_es_backtest_is_undefined_when_predicted_es_is_zero() -> None:
+    """Zero ES forecasts should yield missing diagnostics, not infinities."""
+    backtest_results = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2020-01-01", "2020-01-02"]),
+            "asset": ["portfolio"] * 2,
+            "model": ["historical"] * 2,
+            "alpha": [0.05] * 2,
+            "predicted_lower_quantile": [0.01, 0.01],
+            "predicted_var": [0.0, 0.0],
+            "predicted_es": [0.0, 0.0],
+            "interval_lower": [0.01, 0.01],
+            "interval_upper": [0.02, 0.02],
+            "actual_return": [0.0, 0.02],
+            "violation": [True, False],
+        }
+    )
+    evaluation_config = EvaluationConfig(
+        es_backtest_confidence=0.95,
+        periods=[
+            EvaluationPeriodConfig(
+                name="toy",
+                start_date="2020-01-01",
+                end_date="2020-01-02",
+            )
+        ],
+    )
+
+    metric_row = compute_summary_metrics(
+        backtest_results=backtest_results,
+        evaluation_config=evaluation_config,
+    ).iloc[0]
+
+    assert pd.isna(metric_row["es_z1_statistic"])
+    assert pd.isna(metric_row["es_z2_statistic"])
+    assert metric_row["es_backtest_status"] == "insufficient_tail_data"
 
 
 def test_summary_metrics_include_expected_shortfall_backtests() -> None:

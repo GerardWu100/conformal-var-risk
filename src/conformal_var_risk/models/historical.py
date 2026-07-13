@@ -32,7 +32,7 @@ class HistoricalSimulationVaRModel(VaRModel):
         return max(-float(np.mean(tail_returns)), self.predict_var(alpha=alpha))
 
     def predict_interval(self, alpha: float) -> tuple[float, float]:
-        """Return the central empirical interval with total mass ``1 - alpha``."""
+        """Return the central empirical interval with total mass ``1 - 2 * alpha``."""
         lower_bound = self._compute_quantile(alpha=alpha)
         upper_bound = self._compute_quantile(alpha=1.0 - alpha)
         return lower_bound, upper_bound

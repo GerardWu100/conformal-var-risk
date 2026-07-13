@@ -25,11 +25,6 @@ regular_session_only = true
 # Ordered symbol list used for per-asset modeling and equal-weight portfolio.
 symbols = ["AAPL", "JPM", "TSLA", "SPY"]
 
-# Realized variance settings.
-[realized_variance]
-# Trading days per year used for annualized variance conventions.
-annualization_days = 252
-
 # Rolling backtest settings.
 [backtest]
 # Number of trailing daily returns passed into each model fit.

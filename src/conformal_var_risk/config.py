@@ -69,19 +69,6 @@ class PortfolioConfig:
 
 
 @dataclass(frozen=True)
-class RealizedVarianceConfig:
-    """Realized variance settings.
-
-    Attributes
-    ----------
-    annualization_days
-        Trading days per year used when annualizing variance-like quantities.
-    """
-
-    annualization_days: int
-
-
-@dataclass(frozen=True)
 class BacktestConfig:
     """Rolling backtest settings.
 
@@ -167,7 +154,6 @@ class ProjectConfig:
     run: RunConfig
     raw_data: RawDataConfig
     portfolio: PortfolioConfig
-    realized_variance: RealizedVarianceConfig
     backtest: BacktestConfig
     evaluation: EvaluationConfig
     features: FeatureConfig
@@ -203,7 +189,6 @@ def load_config(config_path: Path) -> ProjectConfig:
         run=RunConfig(**raw_config["run"]),
         raw_data=RawDataConfig(**raw_config["raw_data"]),
         portfolio=PortfolioConfig(**raw_config["portfolio"]),
-        realized_variance=RealizedVarianceConfig(**raw_config["realized_variance"]),
         backtest=BacktestConfig(**raw_config["backtest"]),
         evaluation=EvaluationConfig(
             es_backtest_confidence=raw_config["evaluation"]["es_backtest_confidence"],

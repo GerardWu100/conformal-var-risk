@@ -1,30 +1,57 @@
 ---
 title: "VaR conforme adaptative : la calibration a un prix"
-description: "Une comparaison walk-forward de la Value-at-Risk conforme adaptative avec la simulation historique, les modèles GARCH et la simulation historique filtrée sur quatre actifs américains et un portefeuille équipondéré."
+description: "Un audit walk-forward de la Value at Risk conforme adaptative face à la simulation historique, aux modèles GARCH et à la simulation historique filtrée."
 date: 2026-07-12
 image: images/cover-conformal-var.png
 categories: ["Quantitative Finance", "Risk Management"]
 ---
 
-Une prévision de Value-at-Risk à un jour trace une limite. Si le modèle annonce une borne de queue gauche à 5 %, les rendements devraient la franchir environ cinq jours sur cent. Trop de franchissements indiquent un risque sous-estimé. Aucun franchissement peut sembler rassurant, mais une borne trop large perd vite son utilité pour fixer une limite de trading ou décider d'un montant de capital.
+Une prévision de Value at Risk à un jour trace une borne sous le rendement de demain. Si le modèle vise une queue inférieure de 5 %, environ cinq rendements sur cent devraient franchir cette borne pendant une période d'évaluation longue et stable. Trop de franchissements indiquent une sous-estimation du risque. Trop peu peuvent sembler rassurants, mais une borne trop basse renchérit inutilement le capital et les limites de trading.
 
-J'ai construit ce projet pour mesurer ce compromis. L'expérience compare la prédiction conforme adaptative à quatre benchmarks, avec les mêmes données et les mêmes dates de prévision walk-forward. Le résultat ne se résume pas à un classement : sur cet échantillon, la méthode conforme s'est montrée prudente, au prix d'une perte pinball plus élevée.
+Ce projet compare une prévision conforme adaptative à quatre modèles classiques de risque de marché. Tous reçoivent les mêmes rendements passés et prévoient les mêmes dates. La méthode conforme a produit moins de violations dans cet échantillon, mais aussi la pire perte quantile. C'est ce compromis qui mérite l'analyse.
 
-![Une borne de queue gauche qui s'adapte aux chocs de marché](images/cover-conformal-var.png)
+## Définir l'objet prévu
 
-L'image résume le problème : des observations peuvent traverser une limite de risque, puis une règle adaptative déplace cette limite après l'erreur. Il reste à mesurer si cette protection supplémentaire justifie une borne plus large.
-
-## Une prévision honnête commence par une horloge honnête
-
-Les données suivies dans le dépôt contiennent les barres d'une minute en séance régulière pour AAPL, JPM, TSLA et SPY, de 2019 à 2023. Le pipeline prend le dernier cours de chaque séance et calcule les rendements logarithmiques quotidiens. Si $P_t$ est le cours de clôture au jour $t$ et $P_{t-1}$ le cours précédent, le rendement vaut
+Soit $P_t$ le cours de clôture d'un actif au jour de bourse $t$. Son rendement logarithmique à un jour, exprimé en rendement décimal, vaut
 
 $$
 r_t = \log\left(\frac{P_t}{P_{t-1}}\right).
 $$
 
-Ici, $r_t$ est un rendement quotidien en valeur décimale. Le pipeline calcule aussi la variance réalisée à partir des rendements intrajournaliers et décale les variables explicatives dans le temps. Ces variables préparent la table de recherche pour de futurs modèles, même si les cinq modèles comparés ici utilisent directement l'historique des rendements quotidiens.
+Soit $q_{t,\alpha}$ la prévision du quantile d'ordre $\alpha$ de $r_t$, où $\alpha=0.05$ désigne la queue inférieure à 5 %. Le modèle vise
 
-Chaque prévision respecte le même ordre : ajustement sur 1 150 observations passées, prévision du lendemain, enregistrement du rendement réalisé, puis mise à jour du modèle. Cette séquence est décisive. Le rendement réalisé ne peut pas influencer la borne qui sert à l'évaluer.
+$$
+\Pr(r_t < q_{t,\alpha}) \approx \alpha.
+$$
+
+La Value at Risk (VaR) transforme cette borne de rendement en perte non négative :
+
+$$
+\operatorname{VaR}_{t,\alpha}=\max(-q_{t,\alpha},0).
+$$
+
+Par exemple, $q_{t,0.05}=-0.02$ implique une VaR à un jour de 2 %. Une violation, aussi appelée dépassement, se produit lorsque le rendement réalisé vérifie $r_t<q_{t,\alpha}$. Le backtest évalue le quantile brut, même dans le cas inhabituel où il est positif ; la troncature ne s'applique qu'à l'affichage de la VaR comme perte.
+
+## Des barres minute à une horloge de prévision unique
+
+Le jeu de données suivi contient les barres minute de séance régulière d'AAPL, JPM, TSLA et SPY de 2019 à 2023. Le pipeline prend la dernière clôture de chaque séance, calcule les rendements logarithmiques quotidiens et forme une série de portefeuille équipondéré.
+
+Il calcule aussi la variance réalisée à partir de rendements intrajournaliers synchronisés. Soit $r_{t,i,j}$ le rendement logarithmique intrajournalier du constituant $j$ pendant l'intervalle $i$ du jour $t$, et soit $N=4$ le nombre de constituants. Le rendement intrajournalier du portefeuille équipondéré est
+
+$$
+r^{p}_{t,i}=\frac{1}{N}\sum_{j=1}^{N}r_{t,i,j}.
+$$
+
+La variance réalisée quotidienne du portefeuille, exprimée en rendement décimal au carré par jour, devient
+
+$$
+\operatorname{RV}^{p}_t=\sum_i\left(r^{p}_{t,i}\right)^2
+=\frac{1}{N^2}\sum_i\sum_{j=1}^{N}\sum_{k=1}^{N}r_{t,i,j}r_{t,i,k}.
+$$
+
+L'indice $k$ désigne un second constituant. Les produits croisés où $j\ne k$ portent donc la covariance intrajournalière. Une version précédente moyennait les variances réalisées des constituants. Elle omettait ces termes et utilisait une mauvaise pondération. Le pipeline corrigé calcule d'abord le rendement du portefeuille, puis son carré. Ces variables de variance réalisée sont retardées et disponibles pour de futures extensions ; les cinq modèles testés ici ajustent directement les rendements quotidiens passés.
+
+L'ordre walk-forward est strict. À chaque date de prévision, le modèle s'ajuste sur les 1 150 rendements précédents, prévoit le rendement suivant, enregistre le résultat, puis met à jour son état adaptatif.
 
 ```python
 training_returns = asset_series.iloc[
@@ -33,67 +60,116 @@ training_returns = asset_series.iloc[
 realized_return = float(asset_series.iloc[evaluation_index])
 
 model.fit(training_returns)
-lower_quantile = min(model.predict_lower_quantile(alpha=alpha), 0.0)
+lower_quantile = model.predict_lower_quantile(alpha=alpha)
 is_violation = realized_return < lower_quantile
 model.observe(realized_return=realized_return, alpha=alpha)
 ```
 
-Les quatre actifs et un portefeuille équipondéré donnent cinq séries de prévisions. Chacune est évaluée aux probabilités de queue de 5 % et 1 % avec cinq méthodes : simulation historique, GARCH(1,1) gaussien, GARCH(1,1) de Student, simulation historique filtrée et VaR conforme adaptative. GARCH signifie « hétéroscédasticité conditionnelle autorégressive généralisée » : la variance conditionnelle varie dans le temps.
+Aucune information observée au jour $t$ n'entre dans la borne qui sert à juger ce même jour.
 
-## Construire la borne conforme
+## Les hypothèses des cinq modèles
 
-Le modèle conforme part d'une moyenne mobile. Soit $m=20$ la fenêtre de calcul et $\hat{\mu}_t$ le centre prévu pour le jour $t$ :
+La simulation historique prend le quantile empirique d'ordre $\alpha$ des 250 derniers rendements. Elle suppose que leur distribution reste pertinente pour demain.
 
-$$
-\hat{\mu}_t = \frac{1}{m}\sum_{j=1}^{m} r_{t-j}.
-$$
-
-Pour chaque observation de calibration, le modèle ne garde que les erreurs du côté des pertes. Le score de non-conformité unilatéral est
+Le modèle Generalized Autoregressive Conditional Heteroskedasticity, abrégé GARCH, fait varier la volatilité dans le temps. Pour un GARCH(1,1), soit $\mu_t$ la moyenne conditionnelle, $\varepsilon_t=r_t-\mu_t$ le choc de rendement et $\sigma_t^2$ la variance conditionnelle. La récurrence est
 
 $$
-s_t = \max(\hat{\mu}_t-r_t,0),
+\sigma_{t+1}^2=\omega+\beta\sigma_t^2+\delta\varepsilon_t^2,
 $$
 
-où $s_t$ mesure l'écart entre le rendement et son centre mobile lorsqu'il est négatif, et vaut zéro dans le cas contraire. En notant $Q_p(s)$ le quantile empirique d'ordre $p$ des scores récents et $a_t$ le niveau de queue interne du modèle, le prochain quantile inférieur est
+où $\omega>0$, $\beta\ge 0$ et $\delta\ge 0$ sont des paramètres estimés. Si $F^{-1}(\alpha)$ est le quantile de queue inférieure de la loi des innovations standardisées, alors
 
 $$
-q_t(a_t)=\hat{\mu}_t-Q_{1-a_t}(s).
+q_{t+1,\alpha}=\mu_{t+1}+\sigma_{t+1}F^{-1}(\alpha).
 $$
 
-La Value-at-Risk (VaR) publiée est une perte positive :
+La comparaison retient des innovations gaussiennes et de Student-$t$. La loi de Student-$t$ autorise des queues plus épaisses.
+
+La simulation historique filtrée ajuste aussi un GARCH, mais rééchantillonne les chocs standardisés empiriques au lieu d'imposer une queue gaussienne ou de Student-$t$. Elle associe une prévision paramétrique de volatilité à une distribution non paramétrique des chocs.
+
+## Construire la borne conforme adaptative
+
+Le modèle conforme part d'une moyenne mobile. Soit $m=20$ la fenêtre de moyenne et soit $\hat{\mu}_u$ le centre prévu pour la date de calibration $u$ :
 
 $$
-\operatorname{VaR}_{t,\alpha}=\max(-q_t(a_t),0),
+\hat{\mu}_u=\frac{1}{m}\sum_{j=1}^{m}r_{u-j}.
 $$
 
-où $\alpha$ est la probabilité de queue visée. Il y a violation lorsque $r_t<q_t(a_t)$.
+Son score de non-conformité unilatéral ne conserve que les erreurs défavorables :
 
-Après l'observation du jour $t$, la règle adaptative modifie le niveau de queue interne. Soit $I_t=1$ après une violation et $I_t=0$ sinon, et soit $\gamma=0.005$ le taux d'apprentissage. L'implémentation applique
+$$
+s_u=\max(\hat{\mu}_u-r_u,0).
+$$
+
+La fenêtre conforme contient 500 rendements. Après les 20 observations nécessaires à la moyenne mobile, il reste $n=500-20=480$ scores. On les trie selon $s_{(1)}\le\cdots\le s_{(n)}$. Si $a_t$ est la probabilité de queue interne courante, le rang corrigé pour l'échantillon fini vaut
+
+$$
+k_t=\min\left(n,\left\lceil(n+1)(1-a_t)\right\rceil\right).
+$$
+
+La prochaine borne inférieure de rendement est
+
+$$
+q_{t,\alpha}=\hat{\mu}_t-s_{(k_t)}.
+$$
+
+La correction en $n+1$ sélectionne une statistique d'ordre observée au lieu d'un percentile interpolé. C'est la correction usuelle du conformal split. Elle ne crée pas de garantie inconditionnelle à échantillon fini pour cette expérience : les scores mobiles se chevauchent et les rendements financiers dépendants dans le temps ne respectent pas l'hypothèse d'échangeabilité de la théorie conforme classique.
+
+```python
+sample_size = len(scores)
+rank = int(np.ceil((sample_size + 1) * (1.0 - alpha)))
+clipped_rank = int(np.clip(rank, 1, sample_size))
+adjustment = np.partition(scores, clipped_rank - 1)[clipped_rank - 1]
+lower_quantile = center - adjustment
+```
+
+L'adaptation modifie $a_t$ après chaque résultat. On définit $I_t=1$ en cas de violation et $I_t=0$ sinon. Avec la probabilité de queue cible $\alpha$ et le taux d'apprentissage $\gamma=0.005$, la mise à jour est
 
 $$
 a_{t+1}=\operatorname{clip}\left(a_t+\gamma(\alpha-I_t),0.001,0.999\right).
 $$
 
-Une violation diminue donc $a_t$, sélectionne un quantile de score plus élevé et abaisse la borne suivante. Une journée calme augmente progressivement $a_t$. Le modèle réagit au sens de la dernière erreur de couverture sans imposer de loi paramétrique aux rendements.
+Après une violation, $\alpha-I_t<0$ et $a_{t+1}$ diminue. Le rang $k_{t+1}$ augmente, le score retenu devient plus grand et la borne suivante descend. Les journées calmes inversent ce mouvement par pas de $\gamma\alpha$.
 
-```python
-raw_shortfalls = rolling_centers - realized_segment
-self._scores = np.maximum(raw_shortfalls, 0.0)
+Il s'agit d'une règle de risque inspirée du conformal adaptatif, pas d'une affirmation selon laquelle les rendements boursiers seraient « sans distribution » au sens courant. Le résultat formel de Gibbs et Candès contrôle la fréquence de mauvaise couverture à long terme sous les conditions précisées dans leur article ; ce backtest de sept mois doit toujours justifier ses conclusions par les données.
 
-adjustment = np.quantile(self._scores, 1.0 - self.current_alpha)
-lower_quantile = self._center - adjustment
+## Évaluer la calibration et l'utilité
 
-breach = float(realized_return < self._last_lower_quantile)
-self.current_alpha += self.learning_rate * (self._target_alpha - breach)
-```
+Le taux de violation empirique sur $T$ prévisions est
 
-## Calibration et précision ne répondent pas à la même question
+$$
+\hat{p}=\frac{1}{T}\sum_{t=1}^{T}I_t.
+$$
 
-La fenêtre d'évaluation disponible va du 31 mai au 29 décembre 2023. Elle contient 153 prévisions par actif ou portefeuille, soit 765 prévisions par modèle et niveau de queue. Le volume suffit pour une comparaison compacte, mais reste faible pour un événement à 1 % : après regroupement des cinq séries, le nombre attendu de violations n'est que de 7,65.
+Soit $K=\sum_{t=1}^{T}I_t$ le nombre de violations. Sous une probabilité de violation constante $p$, la vraisemblance de Bernoulli vaut
+
+$$
+\mathcal{L}(p)=p^K(1-p)^{T-K}.
+$$
+
+La calibration demande si $\hat{p}$ est compatible avec $\alpha$. On note $\operatorname{LR}_{\mathrm{UC}}$ la statistique de rapport de vraisemblance de Christoffersen pour la couverture inconditionnelle :
+
+$$
+\operatorname{LR}_{\mathrm{UC}}=-2\log\left(\frac{\mathcal{L}(\alpha)}{\mathcal{L}(\hat{p})}\right),
+$$
+
+dont la loi asymptotique sous l'hypothèse nulle est un chi carré à un degré de liberté. La couverture conditionnelle ajoute un test de transition du premier ordre afin de repérer les violations groupées. Une p-value supérieure à 5 % indique seulement que l'échantillon n'a pas rejeté le modèle ; elle ne prouve pas sa bonne calibration.
+
+La perte quantile, ou perte pinball, mesure aussi l'utilité de la prévision. On note $q_t=q_{t,\alpha}$ le quantile inférieur prévu :
+
+$$
+L_{\alpha}(r_t,q_t)=(\alpha-I_t)(r_t-q_t).
+$$
+
+Les deux cas révèlent son sens économique. Lorsque $r_t\ge q_t$, $I_t=0$ et le coût vaut $\alpha(r_t-q_t)$. Lorsque $r_t<q_t$, il vaut $(1-\alpha)(q_t-r_t)$. Une borne très basse évite les violations, mais paie un petit coût pendant presque toutes les journées ordinaires.
+
+## Résultats : prudente, mais moins précise
+
+La fenêtre de calibration de 1 150 jours laisse 153 prévisions par série, du 31 mai au 29 décembre 2023. Les comptes regroupés ci-dessous combinent quatre actifs et le portefeuille pour former un total descriptif de 765 prévisions. Il ne s'agit pas de 765 essais indépendants, puisque les actifs et le portefeuille partagent les mêmes chocs de marché.
 
 ![Taux de violation observés par modèle et probabilité de queue](images/01_violation_rates.png)
 
-La simulation historique est la plus proche de la cible de 5 %, avec 42 violations et un taux agrégé de 5,49 %. La méthode conforme adaptative en compte 23, soit 3,01 %. Au niveau de 1 %, la méthode conforme n'en compte aucune, contre cinq pour la simulation historique. Les lignes pointillées indiquent les cibles nominales. Rester sous la ligne n'est pas gratuit : si l'échantillon est représentatif, cela signifie que la limite de risque était plus large que nécessaire.
+Les lignes pointillées indiquent les probabilités de queue nominales. Les barres situées en dessous signalent des prévisions prudentes dans cet échantillon, pas nécessairement de meilleures prévisions.
 
 | Modèle | Violations à 5 % | Taux à 5 % | Violations à 1 % | Taux à 1 % |
 |---|---:|---:|---:|---:|
@@ -101,34 +177,44 @@ La simulation historique est la plus proche de la cible de 5 %, avec 42 violatio
 | GARCH gaussien | 24 | 3.14% | 6 | 0.78% |
 | GARCH de Student | 24 | 3.14% | 6 | 0.78% |
 | Simulation historique filtrée | 27 | 3.53% | 4 | 0.52% |
-| Conforme adaptative | 23 | 3.01% | 0 | 0.00% |
+| Conforme adaptative | 22 | 2.88% | 0 | 0.00% |
 
-Pour chaque paire modèle-niveau de queue, les cinq tests de couverture inconditionnelle et conditionnelle de Christoffersen par actif ont une p-value supérieure à 5 %. Cela ne prouve pas que tous les modèles sont bien calibrés. Avec 153 observations par série, ces tests ont peu de puissance dans la queue à 1 %. Ne pas rejeter une hypothèse est moins convaincant qu'une preuve positive de bonne couverture.
+La simulation historique s'approche le plus de la cible groupée à 5 %. La méthode conforme adaptative produit le moins de violations et la VaR moyenne la plus large : 2.48 % pour la queue à 5 % et 3.74 % pour celle à 1 %. La réduction des dépassements consomme donc davantage de largeur de capital.
 
-La perte pinball rend visible le coût de la prudence. Pour le rendement réalisé $r_t$, le quantile prévu $q_t$ et l'indicateur de violation $I_t$, elle vaut
+L'échantillon a peu de puissance à 1 %. Pour une série, $T=153$ et le nombre attendu de violations sous une bonne calibration vaut $T\alpha=1.53$. La probabilité de n'en observer aucune est
 
 $$
-L_{\alpha}(r_t,q_t)=(\alpha-I_t)(r_t-q_t).
+\Pr(K=0\mid T=153,\alpha=0.01)=(1-\alpha)^T=0.99^{153}=21.49\%.
 $$
 
-Elle pénalise une borne trop haute lorsqu'une perte la franchit, mais facture aussi les prévisions inutilement éloignées des rendements ordinaires.
+Zéro violation n'a rien d'étonnant sous l'hypothèse nulle. Sous l'hypothèse d'indépendance binomiale, l'intervalle exact de Clopper-Pearson à 95 % pour zéro violation sur 153 va de 0 % à 2.38 %, ce qui contient la cible de 1 %. Toutes les p-values de Christoffersen calculées actif par actif dépassent aussi 5 %, mais elles souffrent du même manque d'observations.
 
 ![Perte pinball moyenne par modèle et probabilité de queue](images/02_quantile_loss.png)
 
-À 5 %, la simulation historique filtrée obtient la perte moyenne la plus faible, soit 13,21 points de base de rendement ; la méthode conforme adaptative affiche la plus élevée, à 14,01. À 1 %, la simulation historique arrive en tête avec 3,24 points de base, contre 3,68 pour la méthode conforme. L'écart reste modeste, mais l'ordre correspond au graphique des violations : la méthode conforme a acheté moins de franchissements avec une borne plus prudente.
+À 5 %, la simulation historique filtrée obtient la plus faible perte pinball moyenne, soit 13.21 points de base de rendement. La méthode conforme adaptative ferme la marche à 14.09 points de base. À 1 %, la simulation historique mène avec 3.24 points de base, contre 3.84 pour la méthode conforme. Le graphique des violations favorise à lui seul la prudence ; la perte pinball révèle son coût.
 
-## Regarder une borne évoluer
+![Rendements de SPY et borne conforme adaptative à 5 %](images/03_spy_forecast_path.png)
 
-La trajectoire de SPY montre mieux la mécanique. La ligne turquoise est le quantile de rendement conforme adaptatif à 5 %, la ligne grise le rendement logarithmique quotidien réalisé et les points rouges les violations.
+SPY franchit la borne conforme à 5 % cinq fois sur 153 prévisions, soit un taux de 3.27 %. L'intervalle exact à 95 % pour ce taux va de 1.07 % à 7.46 %. La borne turquoise évolue lentement parce qu'elle associe un centre sur 20 jours, 480 scores de calibration et la mise à jour adaptative. Les points rouges marquent les dates qui abaissent la probabilité de queue interne.
 
-SPY a franchi la borne conforme adaptative à 5 % cinq fois sur 153 prévisions, soit un taux de 3,27 %. Le quantile inférieur est plus lisse que le rendement quotidien, car il repose sur un centre à 20 jours et une fenêtre de 500 scores. Après une violation, la mise à jour interne rend la prévision suivante plus prudente ; les observations calmes inversent lentement ce mouvement.
+## Ce que l'expérience permet d'affirmer
 
-## Ce que je changerais avant une utilisation réelle
+Les périodes configurées pour la crise du COVID et le choc de taux de 2022 ne produisent aucune observation hors échantillon : elles se terminent avant la première prévision de mai 2023. Les qualifier de stress tests serait incorrect. Une comparaison crédible en période de stress exige davantage d'historique avant 2019 ou une fenêtre de calibration plus courte, choisie sans consulter les résultats de test.
 
-La calibration sur 1 150 jours ne laisse que sept mois de données pour l'évaluation. Elle exclut aussi des résultats toutes les fenêtres configurées pour la crise du COVID et le choc de taux de 2022, puisque ces dates précèdent la première prévision. Une véritable comparaison en période de stress demanderait un historique brut plus long ou une fenêtre de calibration plus courte, justifiée hors échantillon.
+Les cinq séries de prévisions dépendent les unes des autres. Les violations regroupées servent donc à visualiser les résultats, pas à multiplier artificiellement la taille de l'échantillon. L'inférence de couverture doit rester au niveau de chaque série ou intégrer explicitement cette dépendance.
 
-L'état adaptatif mérite également une analyse de sensibilité. Le taux d'apprentissage $\gamma=0.005$ est élevé par rapport à une cible de 1 %, et le bornage peut compter après plusieurs violations rapprochées. Avant de conclure que la mise à jour réagit mieux aux changements de régime, je tracerais $a_t$, testerais plusieurs taux d'apprentissage et comparerais la couverture glissante.
+Le taux d'apprentissage demande aussi une analyse de sensibilité. Pour la cible à 1 %, une journée calme augmente $a_t$ de seulement $0.00005$, alors qu'une violation le réduit de $0.00495$. Cette asymétrie est voulue, mais sept mois ne suffisent pas à décrire son comportement dans plusieurs régimes de volatilité.
 
-L'Expected Shortfall (ES), c'est-à-dire la perte moyenne conditionnelle dans la queue, reste ici un diagnostic empirique secondaire. La construction conforme cible un quantile ; elle ne donne pas de garantie formelle sur l'ES. Cette distinction doit rester explicite dans une présentation destinée à la production.
+L'Expected Shortfall (ES) est la perte moyenne conditionnelle dans la queue. Le projet la rapporte comme diagnostic empirique secondaire, tandis que le score conforme cible un quantile, pas l'ES. Cette construction ne fournit aucune garantie conforme sur l'ES.
 
-La leçon tient dans la méthode d'évaluation. Couverture, précision et taille d'échantillon doivent être examinées ensemble. Sur cette période, la VaR conforme adaptative a réduit le nombre de violations, tandis que les méthodes historique et historique filtrée ont obtenu une meilleure perte quantile. Avant de choisir la borne, un risk manager doit décider combien de largeur supplémentaire il accepte de payer.
+Le résultat est instructif justement parce que la nouvelle méthode ne gagne pas partout. La VaR conforme adaptative réduit les violations sur ces 153 dates, puis perd sur la perte quantile. Avec un échantillon aussi court, la conclusion défendable reste modeste : la mise à jour a déplacé le compromis entre calibration et précision, et une évaluation plus longue doit déterminer si la largeur supplémentaire se justifie.
+
+## Références
+
+- Gibbs, I. and Candès, E. (2021), [Adaptive Conformal Inference Under Distribution Shift](https://proceedings.neurips.cc/paper/2021/hash/0d441de75945e5acbc865406fc9a2559-Abstract.html).
+- Christoffersen, P. (1998), [Evaluating Interval Forecasts](https://www.jstor.org/stable/2527341).
+- Bollerslev, T. (1986), [Generalized Autoregressive Conditional Heteroskedasticity](https://doi.org/10.1016/0304-4076(86)90063-1).
+- Barone-Adesi, G., Giannopoulos, K. and Vosper, L. (1999), [VaR without Correlations for Portfolios of Derivative Securities](https://doi.org/10.1002/(SICI)1096-9934(199908)19:5%3C583::AID-FUT5%3E3.0.CO;2-S).
+- Koenker, R. and Bassett, G. (1978), [Regression Quantiles](https://www.jstor.org/stable/1913643).
+- Andersen, T., Bollerslev, T., Diebold, F. and Labys, P. (2003), [Modeling and Forecasting Realized Volatility](https://doi.org/10.1111/1468-0262.00418).
+- Basel Committee on Banking Supervision (2019), [Minimum capital requirements for market risk](https://www.bis.org/bcbs/publ/d457.htm).

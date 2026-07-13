@@ -119,6 +119,10 @@ def test_realized_variance_matches_hand_computation() -> None:
     jpm_intraday_r1 = np.log(50.5 / 50.0)
     jpm_intraday_r2 = np.log(51.0 / 50.5)
     expected_jpm_day1 = jpm_intraday_r1**2 + jpm_intraday_r2**2
+    expected_portfolio_day1 = (
+        (0.5 * (aapl_intraday_r1 + jpm_intraday_r1)) ** 2
+        + (0.5 * (aapl_intraday_r2 + jpm_intraday_r2)) ** 2
+    )
 
     assert realized_variance.loc[pd.Timestamp("2020-01-02"), "AAPL"] == pytest.approx(
         expected_aapl_day1
@@ -128,4 +132,4 @@ def test_realized_variance_matches_hand_computation() -> None:
     )
     assert realized_variance.loc[
         pd.Timestamp("2020-01-02"), "portfolio"
-    ] == pytest.approx(0.5 * (expected_aapl_day1 + expected_jpm_day1))
+    ] == pytest.approx(expected_portfolio_day1)

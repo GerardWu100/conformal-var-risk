@@ -30,6 +30,8 @@ class GarchVaRModel(VaRModel):
         clean_returns = np.asarray(returns, dtype=float)
         self._fallback_mean = float(np.mean(clean_returns))
         self._fallback_sigma = float(max(np.std(clean_returns, ddof=1), MIN_SIGMA))
+        # A failed rolling refit must not reuse parameters from the prior date.
+        self._last_result = None
 
         distribution_name = "normal" if self.distribution == "normal" else "t"
         try:

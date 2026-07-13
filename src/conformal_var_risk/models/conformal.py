@@ -56,7 +56,10 @@ class AdaptiveConformalVaRModel(VaRModel):
         """Return the conformal one-sided lower-tail return quantile."""
         self._target_alpha = alpha
         effective_alpha = float(np.clip(self.current_alpha, MIN_ALPHA, MAX_ALPHA))
-        calibration_adjustment = float(np.quantile(self._scores, 1.0 - effective_alpha))
+        calibration_adjustment = self._finite_sample_upper_quantile(
+            scores=self._scores,
+            alpha=effective_alpha,
+        )
         lower_quantile = self._center - calibration_adjustment
         self._last_lower_quantile = lower_quantile
         return lower_quantile
@@ -94,3 +97,35 @@ class AdaptiveConformalVaRModel(VaRModel):
             history = returns[row_number - self.mean_window : row_number]
             rolling_means.append(float(np.mean(history)))
         return np.asarray(rolling_means, dtype=float)
+
+    @staticmethod
+    def _finite_sample_upper_quantile(scores: np.ndarray, alpha: float) -> float:
+        """Return the split-conformal finite-sample upper score quantile.
+
+        Parameters
+        ----------
+        scores
+            One-dimensional calibration nonconformity scores.
+        alpha
+            Effective lower-tail error probability in ``(0, 1)``.
+
+        Returns
+        -------
+        float
+            Order statistic at rank ``ceil((n + 1) * (1 - alpha))``, clipped
+            to the largest available score when the requested rank exceeds
+            the calibration sample size ``n``.
+
+        Notes
+        -----
+        The correction is the standard split-conformal finite-sample rank.
+        Financial time-series scores are not exchangeable, so using this rank
+        does not by itself establish a finite-sample coverage guarantee here.
+        """
+        if len(scores) == 0:
+            raise ValueError("Conformal calibration scores must not be empty.")
+
+        sample_size = len(scores)
+        rank = int(np.ceil((sample_size + 1) * (1.0 - alpha)))
+        clipped_rank = int(np.clip(rank, 1, sample_size))
+        return float(np.partition(scores, clipped_rank - 1)[clipped_rank - 1])

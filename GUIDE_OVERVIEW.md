@@ -14,6 +14,12 @@ The model set is deliberately narrow:
 - Filtered Historical Simulation
 - Adaptive conformal lower-tail forecasting
 
+The adaptive method uses a one-sided downside score and the corrected
+split-conformal order-statistic rank. Its internal tail probability moves after
+each forecast error. Because rolling financial returns are not exchangeable,
+the code treats conformal theory as the construction method and relies on the
+walk-forward backtest for evidence.
+
 ## High-Level Flow
 
 ```mermaid
@@ -46,7 +52,11 @@ flowchart LR
 - The runtime path is local-parquet-only by default.
 - ClickHouse is optional and only documented for one-time raw-cache refresh.
 - The feature layer is small and explicitly no-lookahead.
+- Portfolio realized variance includes synchronized cross-asset covariance and
+  is measured in squared decimal-return units per day.
 - The notebook is a full teaching walkthrough, not a dashboard artifact reader.
+- The 1,150-return fit window leaves only 153 forecasts per series in 2023;
+  configured earlier stress periods therefore have no evaluation rows.
 
 ## File Tree
 

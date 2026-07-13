@@ -24,6 +24,8 @@
 - Rolling center: define lookback $m$ and $\hat{\mu}_t = m^{-1}\sum_{j=1}^{m}r_{t-j}$.
 - One-sided score: define $s_t = \max(\hat{\mu}_t-r_t,0)$.
 - Conformal quantile: define current internal tail level $a_t$ and $q_t(a_t)=\hat{\mu}_t-Q_{1-a_t}(s)$.
+- Finite-sample rank: define score count $n$ and $k_t=\min(n,\lceil(n+1)(1-a_t)\rceil)$.
+- Equal-weight portfolio realized variance: derive it from synchronized intraday portfolio returns so covariance terms remain present.
 - Adaptive update: define breach indicator $I_t$, target tail probability $\alpha$, and learning rate $\gamma$; use $a_{t+1}=\operatorname{clip}[a_t+\gamma(\alpha-I_t)]$ exactly as implemented.
 - Value-at-Risk: $\operatorname{VaR}_{t,\alpha}=\max(-q_t,0)$.
 - Pinball loss and empirical violation rate, with all symbols defined.
@@ -31,6 +33,7 @@
 ## Code excerpts
 
 - The one-sided score construction and adaptive update from `models/conformal.py`.
+- The finite-sample score order statistic from `models/conformal.py`.
 - The explicit fit-predict-observe ordering from `evaluation/backtest.py` to show why realized returns cannot leak into forecasts.
 
 ## Graphs
@@ -47,7 +50,11 @@ The final post will use at most three technical graphs; the hero is decorative r
 - The tracked sample ends in 2023 and is a bounded four-asset research universe, not current market evidence.
 - With a 1,150-observation calibration window, the backtest may have little or no overlap with the configured COVID and rate-shock subperiods. Empty periods must not be described as tested.
 - The adaptive conformal update is reported as implemented. Its sign and behavioral effect deserve explicit scrutiny rather than a generic coverage claim.
+- Classical finite-sample conformal coverage depends on exchangeability, which is not established for overlapping rolling equity-return scores.
+- Pooled counts across assets and the portfolio are descriptive because their violations are cross-sectionally dependent.
+- Portfolio realized variance must be calculated after combining synchronized constituent returns; averaging constituent variances omits covariance.
 - Expected Shortfall is an empirical diagnostic here; the project does not claim a formal conformal guarantee for Expected Shortfall.
+- Primary references will cover adaptive conformal inference, Christoffersen coverage tests, GARCH, filtered historical simulation, quantile loss, realized variance, and Basel market-risk rules.
 
 ## Scope note
 

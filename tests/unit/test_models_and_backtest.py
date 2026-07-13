@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from conformal_var_risk.evaluation.backtest import run_backtest
+from conformal_var_risk.models import garch as garch_module
 from conformal_var_risk.models.base import VaRModel
 from conformal_var_risk.models.conformal import AdaptiveConformalVaRModel
 from conformal_var_risk.models.fhs import FilteredHistoricalSimulationVaRModel
@@ -49,6 +51,28 @@ def test_garch_uses_lower_quantile_contract_for_var() -> None:
     assert np.isclose(predicted_var, max(-lower_quantile, 0.0))
 
 
+def test_failed_garch_refit_discards_stale_prior_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed rolling fit should use current-window fallback statistics."""
+    model = GarchVaRModel(distribution="normal")
+    model._last_result = object()
+
+    def raise_fit_error(*args: object, **kwargs: object) -> object:
+        """Raise a deterministic fitting error for the fallback-path test."""
+        del args
+        del kwargs
+        raise RuntimeError("forced rolling-fit failure")
+
+    monkeypatch.setattr(garch_module, "arch_model", raise_fit_error)
+    returns = np.linspace(-0.01, 0.02, num=40, dtype=float)
+
+    model.fit(returns)
+
+    assert model._last_result is None
+    assert np.isfinite(model.predict_lower_quantile(alpha=0.05))
+
+
 def test_adaptive_conformal_var_matches_requested_lower_quantile_contract() -> None:
     """Adaptive conformal VaR should derive from the public lower-tail forecast."""
     returns = np.linspace(-0.02, 0.02, num=80, dtype=float)
@@ -60,6 +84,19 @@ def test_adaptive_conformal_var_matches_requested_lower_quantile_contract() -> N
     predicted_var = model.predict_var(alpha=0.05)
 
     assert np.isclose(predicted_var, max(-lower_quantile, 0.0))
+
+
+def test_adaptive_conformal_uses_finite_sample_corrected_score_rank() -> None:
+    """Conformal score selection should use the corrected order statistic."""
+    scores = np.arange(1.0, 11.0)
+
+    selected_score = AdaptiveConformalVaRModel._finite_sample_upper_quantile(
+        scores=scores,
+        alpha=0.2,
+    )
+
+    # ceil((10 + 1) * (1 - 0.2)) = 9, so the ninth sorted score is selected.
+    assert selected_score == 9.0
 
 
 def test_adaptive_conformal_non_breach_recovers_alpha_toward_target() -> None:
@@ -159,6 +196,20 @@ class RecordingModel(VaRModel):
         return -0.02, 0.02
 
 
+class PositiveQuantileModel(RecordingModel):
+    """Test double whose forecast quantile is a small positive return."""
+
+    def predict_lower_quantile(self, alpha: float) -> float:
+        """Return a positive quantile to test quantile-score consistency."""
+        del alpha
+        return 0.02
+
+    def predict_interval(self, alpha: float) -> tuple[float, float]:
+        """Return an interval containing the positive lower quantile."""
+        del alpha
+        return 0.02, 0.04
+
+
 def test_backtest_forecasts_next_business_day_without_skipping() -> None:
     """Backtest rows should be stamped on the realized date, not a future one."""
     dates = pd.date_range("2021-01-01", periods=6, freq="B")
@@ -173,6 +224,24 @@ def test_backtest_forecasts_next_business_day_without_skipping() -> None:
 
     assert list(results["date"]) == list(dates[2:])
     assert len(results) == 4
+
+
+def test_backtest_does_not_truncate_positive_return_quantile_for_scoring() -> None:
+    """Coverage and pinball loss should score the model's actual quantile."""
+    dates = pd.date_range("2021-01-01", periods=3, freq="B")
+    frame = pd.DataFrame({"asset_a": [0.03, 0.03, 0.01]}, index=dates)
+
+    results = run_backtest(
+        returns_by_asset=frame,
+        alphas=[0.05],
+        calibration_window=2,
+        model_factories={"positive": lambda alpha: PositiveQuantileModel()},
+    )
+
+    row = results.iloc[0]
+    assert row["predicted_lower_quantile"] == 0.02
+    assert row["predicted_var"] == 0.0
+    assert bool(row["violation"])
 
 
 def test_filtered_historical_uses_lower_quantile_contract_for_var() -> None:

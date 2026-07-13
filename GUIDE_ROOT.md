@@ -26,6 +26,11 @@ The runtime order is:
 6. Write summary metrics and derived parquet artifacts.
 7. Teach the full flow in `notebooks/demo.ipynb`.
 
+Portfolio realized variance is formed from synchronized equal-weight intraday
+portfolio returns before squaring. This retains the covariance terms between
+constituents. All realized-variance columns use squared decimal-return units per
+day and are not annualized.
+
 ## Root Files
 
 - `README.md`
@@ -43,3 +48,8 @@ The runtime order is:
 
 Default execution must succeed offline when `data/raw/` is present.
 ClickHouse is optional and used only for one-time raw-cache refresh.
+
+## Short Journal
+
+- 2026-07-13: Corrected portfolio realized variance to include intraday covariance and removed an unused annualization setting that implied units the pipeline never produced.
+- 2026-07-13: Coverage summaries now include exact binomial uncertainty, and conformal score selection uses the finite-sample order-statistic rank without claiming exchangeability for equity returns.

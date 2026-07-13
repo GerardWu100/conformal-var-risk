@@ -3,11 +3,12 @@
 **Role target:** Risk quant, model validation, portfolio management
 **Wow factor:** Applies a rapidly emerging statistical framework that almost no candidates know about, directly relevant to regulatory risk requirements
 
-Conformal prediction provides **distribution-free uncertainty quantification**
-with finite-sample coverage guarantees. For this repository, the practical
-research question is narrower: can an adaptive conformal lower-tail method
-improve one-day-ahead VaR calibration relative to standard market-risk
-benchmarks on an equity return panel?
+Classical conformal prediction provides finite-sample marginal coverage under
+exchangeability. Equity returns and overlapping rolling scores are serially
+dependent, so this repository does not transfer that guarantee by assertion.
+Its narrower research question is empirical: can an adaptive conformal
+lower-tail rule improve one-day-ahead VaR calibration relative to standard
+market-risk benchmarks on an equity return panel?
 
 The current implementation has settled on this design:
 
@@ -16,6 +17,9 @@ The current implementation has settled on this design:
   GARCH-Student-$t$, and filtered historical simulation
 - evaluate methods with violation rate, coverage rate, quantile loss, and
   Christoffersen coverage tests
+- report exact Clopper-Pearson breach-rate intervals for each forecast series
+- use the finite-sample conformal score rank rather than an interpolated
+  percentile
 - report ES for all models, but do not rank conformal ES as a first-class
   calibrated output because its ES estimate is an empirical tail proxy
 
@@ -32,3 +36,7 @@ This makes the project stronger for model validation and bank risk work: the
 story is now about lower-tail forecast calibration, walk-forward correctness,
 and defensible benchmarking rather than a broad but loosely specified
 "conformal finance" survey.
+
+The current 1,150-day calibration window leaves 153 out-of-sample observations
+per series, all in 2023. The configured COVID and 2022 rate-shock periods have
+no out-of-sample overlap and must not be presented as completed stress tests.

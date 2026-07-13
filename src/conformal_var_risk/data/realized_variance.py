@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from conformal_var_risk.data.daily_panel import (
-    _append_portfolio_column,
     _assign_new_york_trading_date,
     _filter_regular_session,
 )
@@ -63,7 +62,23 @@ def build_daily_realized_variance_panel(
     )
     realized_variance_panel.index.name = "date"
 
-    return _append_portfolio_column(
-        panel=realized_variance_panel,
-        constituent_symbols=symbols,
+    # Portfolio realized variance includes cross-asset covariance. Averaging
+    # constituent variances would omit covariance and apply the wrong weights.
+    intraday_return_panel = working.pivot_table(
+        index=["date", "ts"],
+        columns="symbol",
+        values="intraday_log_return",
+        aggfunc="last",
+    ).reindex(columns=symbols)
+    complete_constituent_rows = intraday_return_panel.notna().all(axis=1)
+    equal_weight_intraday_return = intraday_return_panel.mean(axis=1).where(
+        complete_constituent_rows
     )
+    portfolio_realized_variance = (
+        equal_weight_intraday_return.pow(2).groupby(level="date").sum(min_count=1)
+    )
+
+    realized_variance_panel["portfolio"] = portfolio_realized_variance.reindex(
+        realized_variance_panel.index
+    )
+    return realized_variance_panel

@@ -63,10 +63,10 @@ def run_backtest(
 
                 for alpha, model in models_by_alpha.items():
                     model.fit(training_returns)
-                    raw_lower_quantile = model.predict_lower_quantile(alpha=alpha)
+                    lower_quantile = model.predict_lower_quantile(alpha=alpha)
 
-                    # VaR is reported as a positive loss; quantiles stay in return space.
-                    lower_quantile = min(raw_lower_quantile, 0.0)
+                    # Score the model's actual return quantile. VaR remains a
+                    # nonnegative loss amount even when that quantile is positive.
                     lower_bound, upper_bound = model.predict_interval(alpha=alpha)
                     predicted_var = max(-lower_quantile, 0.0)
                     predicted_es = model.predict_es(alpha=alpha)
