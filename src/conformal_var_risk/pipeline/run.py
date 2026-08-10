@@ -68,12 +68,14 @@ def run_pipeline(config_path: Path) -> PipelineArtifacts:
     daily_returns = build_daily_log_return_panel(
         minute_bars=raw_minute_bars,
         symbols=config.portfolio.symbols,
+        regular_session_only=config.raw_data.regular_session_only,
     )
     daily_returns.to_parquet(daily_returns_path)
 
     daily_realized_variance = build_daily_realized_variance_panel(
         minute_bars=raw_minute_bars,
         symbols=config.portfolio.symbols,
+        regular_session_only=config.raw_data.regular_session_only,
     )
     daily_realized_variance.to_parquet(realized_variance_path)
 

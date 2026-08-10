@@ -25,6 +25,7 @@ def _assign_new_york_trading_date(minute_bars: pd.DataFrame) -> pd.DataFrame:
 def build_daily_log_return_panel(
     minute_bars: pd.DataFrame,
     symbols: list[str],
+    regular_session_only: bool = True,
 ) -> pd.DataFrame:
     """Build daily close-to-close log returns from raw minute bars.
 
@@ -35,6 +36,9 @@ def build_daily_log_return_panel(
         `ts` column must be timezone-aware timestamps.
     symbols
         Ordered symbol list for output columns.
+    regular_session_only
+        Whether to drop bars outside the 09:30-16:00 New York session before
+        picking each daily close.
 
     Returns
     -------
@@ -42,12 +46,16 @@ def build_daily_log_return_panel(
         Daily log-return panel indexed by date. Columns are configured symbols
         plus the equal-weight `portfolio` series.
     """
-    regular_session = _filter_regular_session(minute_bars=minute_bars)
-    regular_session = _assign_new_york_trading_date(minute_bars=regular_session)
+    session_bars = (
+        _filter_regular_session(minute_bars=minute_bars)
+        if regular_session_only
+        else minute_bars
+    )
+    dated_bars = _assign_new_york_trading_date(minute_bars=session_bars)
 
-    # One close per symbol-day: last regular-session print, then wide panel.
+    # One close per symbol-day: last print of the retained session, then wide panel.
     daily_close = (
-        regular_session.sort_values(["symbol", "ts"])
+        dated_bars.sort_values(["symbol", "ts"])
         .groupby(["date", "symbol"], as_index=False)["close"]
         .last()
         .pivot(index="date", columns="symbol", values="close")

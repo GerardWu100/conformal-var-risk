@@ -53,3 +53,4 @@ ClickHouse is optional and used only for one-time raw-cache refresh.
 
 - 2026-07-13: Corrected portfolio realized variance to include intraday covariance and removed an unused annualization setting that implied units the pipeline never produced.
 - 2026-07-13: Coverage summaries now include exact binomial uncertainty, and conformal score selection uses the finite-sample order-statistic rank without claiming exchangeability for equity returns.
+- 2026-08-10: The `regular_session_only` setting is now honoured by both panel builders instead of being parsed and ignored, and `CODE_EXPLAINED.html` documents the whole pipeline structure at the repository root.

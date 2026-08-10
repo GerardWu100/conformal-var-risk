@@ -50,8 +50,9 @@ Additional columns are allowed but discouraged for portability.
 ## Session Convention
 
 - Rows may include full-session minute bars.
-- The runtime pipeline always applies regular-session filtering internally
-  (`09:30` to `16:00` New York time, inclusive of the close print).
+- The runtime pipeline applies regular-session filtering internally
+  (`09:30` to `16:00` New York time, inclusive of the close print) whenever
+  `regular_session_only` is `true` in `config.toml`, which is the default.
 
 ## Bounded Demo Scope
 

@@ -83,7 +83,8 @@ class AdaptiveConformalVaRModel(VaRModel):
     def observe(self, realized_return: float, alpha: float | None = None) -> None:
         """Update the adaptive tail level with a one-sided target-seeking rule."""
         del alpha
-        # Raise alpha after a breach (coverage too low); lower it after a quiet day.
+        # Lower alpha after a breach, which selects a higher score rank and a more
+        # conservative next boundary; raise it after a quiet day.
         breach_indicator = float(realized_return < self._last_lower_quantile)
         updated_alpha = self.current_alpha + self.learning_rate * (
             self._target_alpha - breach_indicator

@@ -21,6 +21,7 @@ from conformal_var_risk.data.daily_panel import (
 def build_daily_realized_variance_panel(
     minute_bars: pd.DataFrame,
     symbols: list[str],
+    regular_session_only: bool = True,
 ) -> pd.DataFrame:
     """Build daily realized variance panel per symbol and portfolio.
 
@@ -30,6 +31,9 @@ def build_daily_realized_variance_panel(
         Long-form raw frame with columns `symbol`, `ts`, and `close`.
     symbols
         Ordered output symbols.
+    regular_session_only
+        Whether to drop bars outside the 09:30-16:00 New York session before
+        summing squared intraday returns.
 
     Returns
     -------
@@ -37,9 +41,13 @@ def build_daily_realized_variance_panel(
         Daily realized variance panel indexed by date. Columns are symbols plus
         equal-weight `portfolio` realized variance.
     """
-    regular_session = _filter_regular_session(minute_bars=minute_bars)
+    session_bars = (
+        _filter_regular_session(minute_bars=minute_bars)
+        if regular_session_only
+        else minute_bars
+    )
     working = _assign_new_york_trading_date(
-        minute_bars=regular_session.sort_values(["symbol", "ts"])
+        minute_bars=session_bars.sort_values(["symbol", "ts"])
     )
 
     # Sum squared intraday log returns within each symbol-day.

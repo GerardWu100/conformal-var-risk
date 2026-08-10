@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>conformal-var-risk - code explanation</title>
+<script>
+  window.MathJax = { tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+<script type="module">
+  // the map diagram at the top of the page; theme follows the page palette
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  const isLight = document.documentElement.getAttribute("data-theme") === "light";
+  mermaid.initialize({ startOnLoad: true, theme: isLight ? "neutral" : "dark",
+                       flowchart: { curve: "basis", useMaxWidth: true } });
+</script>
+<style>
+  :root{
+    /* dark is the default palette; a light override follows below */
+    --paper:#12161b; --bg:#12161b; --panel:#1b2027; --card:#1a1f26; --surface:#1a1f26; --raise:#1e242c;
+    --ink:#e9eef4; --soft:#b3bec9; --muted:#b3bec9; --faint:#828d99;
+    --line:#2c343e; --line2:#232a33;
+    --green:#6fc796; --greenbg:#14241c; --greenline:#2f4d3a;
+    --amber:#e0b365; --amberbg:#262010; --amberline:#4d3f20;
+    --blue:#87b8ee; --bluebg:#141e2b; --blueline:#2d425c;
+    --red:#e89296; --redbg:#26161a; --redline:#4f2f35;
+    --slate:#a7b1be; --slatebg:#1c2027; --slateline:#353c46;
+    --accent:#4fb9c2; --accent-ink:#6fd0d8; --accent-bg:#10262a;
+    --def:#87b8ee; --def-bg:#141e2b; --def-bd:#2d425c;
+    --why:#6fc796; --why-bg:#14241c; --why-bd:#2f4d3a;
+    --warn:#e0b365; --warn-bg:#262010; --warn-bd:#4d3f20;
+    --flag:#e89296; --flag-bg:#26161a; --flag-bd:#4f2f35;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  :root[data-theme="light"]{
+    --paper:#faf8f4; --bg:#faf8f4; --panel:#f1ede6; --card:#ffffff; --surface:#ffffff; --raise:#fbfaf7;
+    --ink:#1b1b1b; --soft:#4a453e; --muted:#4a453e; --faint:#777067;
+    --line:#d6d0c6; --line2:#e7e2da;
+    --green:#2f6b4c; --greenbg:#e7f1ea; --greenline:#bcdac9;
+    --amber:#8f6413; --amberbg:#f6efdd; --amberline:#e3d3a8;
+    --blue:#2c5f95; --bluebg:#e7eef7; --blueline:#c3d6ea;
+    --red:#943232; --redbg:#f6eaea; --redline:#e2c4c4;
+    --slate:#525a66; --slatebg:#eceef1; --slateline:#cdd2d9;
+    --accent:#0e7c86; --accent-ink:#0b5f67; --accent-bg:#e7f4f4;
+    --def:#2c5f95; --def-bg:#e7eef7; --def-bd:#c3d6ea;
+    --why:#2f6b4c; --why-bg:#e7f1ea; --why-bd:#bcdac9;
+    --warn:#8f6413; --warn-bg:#f6efdd; --warn-bd:#e3d3a8;
+    --flag:#943232; --flag-bg:#f6eaea; --flag-bd:#e2c4c4;
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;font-size:16px}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:18px;line-height:1.58;-webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility}
+  .wrap{padding:2.2em clamp(1em,4vw,3.2em) 5em}
+
+  h1{font-size:clamp(2.1rem,5vw,2.7rem);line-height:1.12;letter-spacing:-.02em;font-weight:800;
+    text-wrap:balance;margin:.2em 0 .2em}
+  h2{font-size:1.5rem;font-weight:750;letter-spacing:-.01em;text-wrap:balance;
+    margin:2.4em 0 .5em;padding-top:.7em;border-top:2px solid var(--line)}
+  h3{font-size:1.26rem;font-weight:700;margin:1.7em 0 .4em;color:var(--ink)}
+  h3 code{font-size:.92em}
+  h4{font-size:1rem;margin:1.3em 0 .3em;text-transform:uppercase;letter-spacing:.05em;color:var(--faint)}
+  p{margin:.7em 0}
+  ul,ol{margin:.55em 0;padding-left:1.3em}
+  li{margin:.3em 0}
+  strong,b{color:var(--ink)}
+  a{color:var(--accent-ink);text-underline-offset:2px}
+  a:hover{color:var(--accent)}
+  hr{border:none;border-top:1px solid var(--line);margin:2.5em 0}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  code{font-family:var(--mono);font-size:.9em;background:var(--panel);color:var(--ink);
+    padding:.1em .4em;border-radius:4px}
+  pre{background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:1em 1.15em;
+    overflow-x:auto;font-size:.94rem;line-height:1.62;margin:1.1em 0;color:var(--ink);
+    font-family:var(--mono)}
+  pre code{background:none;padding:0;font-size:1em}
+  pre .c{color:var(--faint);font-style:italic}
+
+  .lede{font-size:1.12rem;line-height:1.48;color:var(--soft)}
+  .eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent-ink);margin:0 0 1.1em;display:flex;gap:.6em;align-items:center;flex-wrap:wrap}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .sec-no{font-family:var(--mono);font-size:.85rem;color:var(--accent-ink);
+    letter-spacing:.1em;display:block;margin-bottom:.15em}
+  .tag{display:inline-block;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;
+    background:var(--greenbg);color:var(--green);border:1px solid var(--greenline);
+    padding:.25em .75em;border-radius:20px;margin-bottom:1em}
+  .big{font-size:1.42rem;font-weight:700;color:var(--green)}
+  .pill{font-variant-numeric:tabular-nums;font-weight:600}
+  .fnote{font-size:.95rem;color:var(--soft)}
+  .reads{margin:.55em 0}
+  .reads b{color:var(--soft)}
+  .foot{margin-top:3em;padding-top:1.2em;border-top:1px solid var(--line);
+    color:var(--soft);font-size:.95rem}
+
+  .box{border:1px solid var(--line);border-left-width:4px;border-radius:10px;
+    padding:1em 1.2em;margin:1.3em 0;background:var(--card)}
+  .box>:first-child{margin-top:0}.box>:last-child{margin-bottom:0}
+  .box p:first-child{margin-top:0}.box p:last-child{margin-bottom:0}
+  .box .k{font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.08em;
+    display:block;margin-bottom:.45em}
+  .def{border-left-color:var(--def);background:var(--def-bg)}.def .k{color:var(--def)}
+  .gist{border-left-color:var(--accent);background:var(--accent-bg)}.gist .k{color:var(--accent-ink)}
+  .why{border-left-color:var(--why);background:var(--why-bg)}.why .k{color:var(--why)}
+  .warn{border-left-color:var(--warn);background:var(--warn-bg)}.warn .k{color:var(--warn)}
+  .flag{border-left-color:var(--flag);background:var(--flag-bg)}.flag .k{color:var(--flag)}
+  .data{border-left-color:var(--slate);background:var(--slatebg)}.data .k{color:var(--slate)}
+  .io{display:grid;grid-template-columns:1fr 1fr;gap:.9em}
+  .io.stack{grid-template-columns:1fr}
+  @media (max-width:820px){.io{grid-template-columns:1fr}}
+  .io .lab{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:700}
+  .io pre{margin:.25em 0 0;font-size:.8rem;line-height:1.5}
+  .data>p{font-size:.95rem}
+
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:1.1em 1.4em;margin:1.8em 0}
+  .toc .rk{font-family:var(--mono);font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--faint);margin-bottom:.5em}
+  .toc ol{margin:.35em 0 0;padding-left:1.4em}
+  .toc a{text-decoration:none;color:var(--ink)}
+  .toc a:hover{color:var(--accent-ink)}
+
+  .scroll{overflow-x:auto;margin:1.2em 0}
+  table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:1rem;background:var(--card);
+    font-variant-numeric:tabular-nums}
+  .scroll table{margin:0}
+  th,td{border:1px solid var(--line);padding:.55em .75em;text-align:left;vertical-align:top}
+  th,thead th{background:var(--panel);color:var(--ink);font-weight:700}
+  td.n,th.n{text-align:right}
+  .pass{color:var(--green);font-weight:700}
+  .failw{color:var(--red);font-weight:700}
+
+  .chip{display:inline-block;font-size:.74rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.06em;padding:.15em .55em;border-radius:4px;white-space:nowrap;border:1px solid}
+  .c-veto{background:var(--redbg);color:var(--red);border-color:var(--redline)}
+  .c-drop{background:var(--amberbg);color:var(--amber);border-color:var(--amberline)}
+  .c-never{background:var(--slatebg);color:var(--slate);border-color:var(--slateline)}
+  .c-bug{background:var(--bluebg);color:var(--blue);border-color:var(--blueline)}
+  .legend{display:flex;flex-wrap:wrap;gap:.5em 1.1em;margin:1em 0 0;font-size:.92rem;color:var(--soft)}
+  .legend span.chip{margin-right:.4em}
+
+  figure{margin:1.6em 0;text-align:center}
+  /* charts are rendered on white canvases; keep the white plate but soften the glare */
+  figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;
+    background:#fff;padding:6px}
+  :root:not([data-theme="light"]) figure img{filter:brightness(.94) contrast(1.02)}
+  figcaption{font-size:.92rem;color:var(--soft);margin-top:.6em;
+    margin-left:auto;margin-right:auto}
+
+  /* the map diagram sits on its own plate and scrolls sideways rather than the page */
+  .mermaid{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:1.2em;margin:1.4em 0;overflow-x:auto;text-align:center;
+    font-family:var(--sans)}
+  .mermaid svg{max-width:100%;height:auto}
+
+  /* rendered maths inherits the page colour instead of MathJax's own default */
+  mjx-container,.katex{color:inherit}
+  mjx-container[display="true"],.katex-display{overflow-x:auto;overflow-y:hidden;padding:.15em 0}
+</style>
+</head><body>
+<div class="wrap">
+
+<p class="eyebrow"><span class="dot"></span>conformal-var-risk &middot; offline tail-risk pipeline &middot; code walkthrough</p>
+<h1>Reading the conformal Value-at-Risk pipeline</h1>
+<p class="lede">What each folder holds, what feeds what, and where the real decisions live &mdash; with numbers taken from an actual run of this repository, not from memory.</p>
+
+<div class="box def">
+  <span class="k">How to use this</span>
+  <p>Sections follow the order the code executes. Every snippet is copied from the files under
+  <code>src/conformal_var_risk/</code>; every number in a grey <b>Sample data</b> box came out of running this
+  repository on its tracked input (<code>data/raw/minute_bars.parquet</code>, 2,034,240 rows) on 10 August 2026.
+  Coloured boxes flag design choices, traps, and honest weaknesses. This page explains
+  <em>structure and behaviour</em>; it deliberately does not walk every line.</p>
+</div>
+
+<div class="box why">
+  <span class="k">The whole thing in plain English</span>
+  <p>The project asks one narrow question: <b>how much can I lose tomorrow, and which method predicts that number best?</b>
+  It reads five years of minute-by-minute prices for four stocks from a file on disk, turns them into one
+  daily return number per stock per day, then walks forward through 2023 one day at a time. On each day it
+  refits five competing models on the previous 1,150 days and asks each one for the return level that should
+  only be breached 5 percent (and 1 percent) of the time. It records whether tomorrow's real return fell
+  below that level, and at the end it counts how often each model was wrong and whether that count is
+  statistically believable.</p>
+</div>
+
+<h2 id="map"><span class="sec-no">00</span>Map</h2>
+
+<div class="mermaid">
+flowchart LR
+  cfg[("config.toml")] --> load["load_raw_minute_bars()"]
+  raw[("data/raw/minute_bars.parquet")] --> load
+  load --> ret["build_daily_log_return_panel()"]
+  load --> rv["build_daily_realized_variance_panel()"]
+  ret --> feat["build_feature_table()"]
+  rv --> feat
+  ret --> bt["run_backtest()"]
+  reg["build_model_factories()"] --> bt
+  bt --> met["compute_summary_metrics()"]
+  feat --> out[("outputs/runs/*.parquet")]
+  met --> out
+</div>
+<p class="fnote">Cylinders are files on disk; rectangles are functions, named exactly as they appear in the source.
+Arrows show the direction data moves. Note the shape of it: <code>build_feature_table()</code> writes a file but
+nothing downstream reads it &mdash; the five models are fed only by <code>build_daily_log_return_panel()</code>.
+That is the single most important thing to notice on this page, and section 05 explains it.</p>
+
+<div class="toc">
+  <div class="rk">Contents</div>
+  <ol>
+    <li><a href="#s01">Layout and entry points &mdash; where to start reading</a></li>
+    <li><a href="#s02">Settings &mdash; <code>config.toml</code> and <code>load_config()</code></a></li>
+    <li><a href="#s03">Reading the raw file &mdash; <code>load_raw_minute_bars()</code></a></li>
+    <li><a href="#s04">Daily returns &mdash; <code>build_daily_log_return_panel()</code></a></li>
+    <li><a href="#s05">Realized variance &mdash; <code>build_daily_realized_variance_panel()</code></a></li>
+    <li><a href="#s06">The feature table &mdash; <code>build_feature_table()</code></a></li>
+    <li><a href="#s07">The model contract &mdash; <code>VaRModel</code> and the registry</a></li>
+    <li><a href="#s08">The four benchmarks &mdash; historical, GARCH, filtered historical</a></li>
+    <li><a href="#s09">The adaptive conformal model &mdash; <code>AdaptiveConformalVaRModel</code></a></li>
+    <li><a href="#s10">The walk-forward loop &mdash; <code>run_backtest()</code></a></li>
+    <li><a href="#s11">Scoring &mdash; <code>compute_summary_metrics()</code> and its tests</a></li>
+    <li><a href="#s12">Orchestration &mdash; <code>run_pipeline()</code> and the command line</a></li>
+    <li><a href="#s13">The blog charts &mdash; <code>blog/generate_charts.py</code></a></li>
+    <li><a href="#calls">Call graph</a></li>
+    <li><a href="#config-ref">Every setting and what changing it does</a></li>
+    <li><a href="#edge">Edge cases</a></li>
+    <li><a href="#traps">Traps and idioms</a></li>
+    <li><a href="#point">If someone points at a line</a></li>
+    <li><a href="#limits">Honest limitations</a></li>
+    <li><a href="#fixes">Fixes applied</a></li>
+    <li><a href="#verify">How this page was verified</a></li>
+  </ol>
+</div>
+
+<h2 id="s01"><span class="sec-no">01</span>Layout and entry points</h2>
+
+<p>The repository is small on purpose. About 1,000 lines of product code, 700 lines of tests, one notebook.
+Everything importable lives under <code>src/conformal_var_risk/</code>; everything that is not product code
+sits beside it.</p>
+
+<pre>conformal-var-risk/
+├── config.toml                       <span class="c"># every tunable setting, one file</span>
+├── data/raw/minute_bars.parquet      <span class="c"># the only input; tracked in git (22 MB)</span>
+├── scripts/run_pipeline.py           <span class="c"># thin command-line shell (37 lines)</span>
+├── src/conformal_var_risk/
+│   ├── config.py                     <span class="c"># TOML -&gt; frozen dataclasses</span>
+│   ├── data/
+│   │   ├── raw_cache.py              <span class="c"># read + validate the parquet file</span>
+│   │   ├── daily_panel.py            <span class="c"># minute bars -&gt; daily log returns</span>
+│   │   └── realized_variance.py      <span class="c"># minute bars -&gt; daily realized variance</span>
+│   ├── features/feature_builder.py   <span class="c"># lagged feature table (built, not consumed)</span>
+│   ├── models/
+│   │   ├── base.py                   <span class="c"># the VaRModel interface all five obey</span>
+│   │   ├── historical.py             <span class="c"># benchmark 1</span>
+│   │   ├── garch.py                  <span class="c"># benchmarks 2 and 3</span>
+│   │   ├── fhs.py                    <span class="c"># benchmark 4</span>
+│   │   ├── conformal.py              <span class="c"># the method under study</span>
+│   │   └── registry.py               <span class="c"># name -&gt; constructor mapping</span>
+│   ├── evaluation/
+│   │   ├── backtest.py               <span class="c"># the walk-forward loop</span>
+│   │   └── metrics.py                <span class="c"># coverage tests and losses</span>
+│   └── pipeline/run.py               <span class="c"># glues all of the above together</span>
+├── tests/unit/                       <span class="c"># 24 tests, all passing</span>
+├── notebooks/demo.ipynb              <span class="c"># the same flow, cell by cell, for teaching</span>
+├── blog/                             <span class="c"># bilingual write-up + chart script</span>
+└── outputs/runs/*.parquet            <span class="c"># generated; git-ignored</span></pre>
+
+<div class="box def"><span class="k">The three ways to run it</span>
+<p><b>1. The pipeline.</b> <code>uv run python scripts/run_pipeline.py --config config.toml</code> &mdash; does everything
+and writes five parquet files. Timed at <b>1 minute 51 seconds</b> here, despite refitting GARCH models
+several thousand times.<br>
+<b>2. The notebook.</b> <code>uv run python -m nbconvert --to notebook --execute --inplace notebooks/demo.ipynb</code>
+&mdash; the identical flow, but each stage prints its intermediate frame. Same cost.<br>
+<b>3. The tests.</b> <code>uv run python -m pytest</code> &mdash; 24 tests in about 3 seconds, including one
+end-to-end run on a tiny synthetic dataset built inside the test file.</p></div>
+
+<div class="box warn"><span class="k">Trap: the parquet outputs are not tracked</span>
+<p><code>.gitignore</code> contains <code>outputs/**/*.parquet</code>. A fresh clone has no results in it. If you open the
+notebook expecting numbers, you have to run the pipeline first. The frozen CSV files under <code>blog/data/</code>
+are the only committed results, and they exist so the blog charts can be redrawn without re-running the pipeline.</p></div>
+
+<h2 id="s02"><span class="sec-no">02</span>Settings &mdash; <code>config.toml</code> and <code>load_config()</code></h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>One file holds every number you might want to change. <code>load_config()</code> reads it and hands back an object
+whose fields cannot be reassigned, so no part of the pipeline can quietly alter a setting halfway through a run.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> a path to <code>config.toml</code>.
+<b>Output:</b> one <code>ProjectConfig</code> holding ten nested frozen dataclasses.
+<b>Role:</b> every other module receives its settings from this object; nothing reads the TOML file directly.</p></div>
+
+<pre>@dataclass(frozen=True)
+class ProjectConfig:
+    <span class="c">"""Full typed runtime configuration object."""</span>
+
+    run: RunConfig
+    raw_data: RawDataConfig
+    portfolio: PortfolioConfig
+    backtest: BacktestConfig
+    evaluation: EvaluationConfig
+    features: FeatureConfig
+    historical: HistoricalConfig
+    garch: GarchConfig
+    filtered_historical: FilteredHistoricalConfig
+    conformal: ConformalConfig</pre>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">in &mdash; config.toml (excerpt)</span>
+<pre>[run]
+start_date = "2019-01-01"
+end_date   = "2023-12-31"
+seed       = 11
+
+[backtest]
+calibration_window = 1150
+alphas = [0.05, 0.01]</pre></div>
+<div><span class="lab">out &mdash; load_config(...)</span>
+<pre>RunConfig(start_date='2019-01-01',
+          end_date='2023-12-31',
+          output_dir='outputs/runs',
+          seed=11)
+BacktestConfig(calibration_window=1150,
+               alphas=[0.05, 0.01])
+ConformalConfig(window=500,
+                mean_window=20,
+                learning_rate=0.005)</pre></div>
+</div>
+<p>The dataclasses are built with <code>**raw_config["section"]</code>, so a typo in a TOML key name fails loudly
+at load time with a <code>TypeError</code> naming the unexpected argument &mdash; not silently at model time.</p></div>
+
+<div class="box why"><span class="k">Why frozen dataclasses instead of a plain dictionary</span>
+<p>Two reasons. A dictionary would let any function write <code>config["backtest"]["alphas"] = [0.1]</code> mid-run and
+nothing would complain; <code>frozen=True</code> makes that raise. And a dictionary gives no help when you misspell a key
+&mdash; <code>config["backtst"]</code> raises only at the moment it is read, possibly well into a run.</p></div>
+
+<div class="box flag"><span class="k">The weakness, stated honestly</span>
+<p>There is no validation beyond "the keys exist and have the right names". Nothing checks that
+<code>alphas</code> are between 0 and 1, that <code>calibration_window</code> is positive, or that
+<code>start_date</code> is before <code>end_date</code>. A nonsense value propagates until some numerical
+function chokes on it.</p></div>
+
+<h2 id="s03"><span class="sec-no">03</span>Reading the raw file &mdash; <code>load_raw_minute_bars()</code></h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>It opens the parquet file, refuses to continue unless the file looks exactly the way the rest of the code
+expects, then cuts the rows down to the configured date range.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the folder <code>data/raw/</code>, a filename pattern, the list of symbols that must be present, and two dates.
+<b>Output:</b> one long DataFrame with exactly three columns &mdash; <code>symbol</code>, <code>ts</code>, <code>close</code> &mdash;
+sorted by symbol then timestamp.
+<b>Role:</b> the single gate through which all data enters. Every later stage may assume the contract holds.</p></div>
+
+<p>It runs six checks in order and raises a message naming the problem:</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Check</th><th>Raises</th><th>Why it is worth checking</th></tr></thead>
+<tbody>
+<tr><td>the folder exists</td><td><code>FileNotFoundError</code></td><td>a fresh clone without the tracked data gets a clear message, not a confusing empty frame</td></tr>
+<tr><td>at least one file matches the pattern</td><td><code>FileNotFoundError</code></td><td>a typo in <code>file_pattern</code> would otherwise look like "no data"</td></tr>
+<tr><td><code>symbol</code>, <code>ts</code>, <code>close</code> all present</td><td><code>ValueError</code></td><td>the rest of the code indexes these names directly</td></tr>
+<tr><td>every timestamp parses, and carries a timezone</td><td><code>ValueError</code></td><td>a naive timestamp would be silently treated as New York time and shift the whole session by five hours</td></tr>
+<tr><td>every configured symbol appears</td><td><code>ValueError</code></td><td>a missing symbol would produce an all-NaN column and a permanently empty portfolio series</td></tr>
+<tr><td>rows remain after the date filter</td><td><code>ValueError</code></td><td>a date range outside the data would otherwise fail much later with an unhelpful error</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; data/raw/minute_bars.parquet, first and last rows</span>
+<pre>        symbol                        ts       close
+0         AAPL 2019-01-01 14:30:00+00:00  150.019110
+1         AAPL 2019-01-01 14:31:00+00:00  150.007317
+2         AAPL 2019-01-01 14:32:00+00:00  150.001011
+...
+2034239   TSLA 2023-12-29 20:59:00+00:00  175.125925</pre></div>
+<div><span class="lab">out &mdash; the returned frame</span>
+<pre>shape   : (2034240, 3)
+dtypes  : symbol str, ts datetime64[us, UTC], close float64
+symbols : ['AAPL', 'JPM', 'SPY', 'TSLA']
+ts range: 2019-01-01 14:30 UTC .. 2023-12-29 20:59 UTC
+                                       &lt;- nothing dropped: the file
+                                          already holds exactly the
+                                          bars the contract wants</pre></div>
+</div>
+<p>2,034,240 rows = 4 symbols &times; 1,304 days &times; 390 minutes. Counting timestamps by New York hour gives
+156,480 bars in the 09:00 hour (that is 30 minutes, 09:30 to 09:59) and 312,960 in each of the hours 10 through 15
+(60 minutes each). 30 + 6&times;60 = 390 minutes per day.</p></div>
+
+<div class="box warn"><span class="k">Trap: the date window is cut in UTC, but the sessions are New York</span>
+<p>The bounds are built as <code>pd.Timestamp(start_date, tz="UTC")</code> through
+<code>pd.Timestamp(end_date, tz="UTC") + 1 day - 1 second</code>. Midnight UTC on 1 January 2019 is
+7 p.m. New York on 31 December 2018, so the window technically admits a few hours of the previous New York evening.
+It does no harm here because the session filter in the next stage throws those bars away, and because this
+particular file contains no after-hours bars at all. On a file that <em>did</em> contain evening bars, and with
+<code>regular_session_only = false</code>, the first and last trading days would be lopsided.</p></div>
+
+<h2 id="s04"><span class="sec-no">04</span>Daily returns &mdash; <code>build_daily_log_return_panel()</code></h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Keep only the bars inside normal trading hours, take the last price of each day for each stock, then measure
+each day's move as the log change from the previous day's close. Finally add a fifth column that averages the
+four stocks equally, but only on days where all four traded.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the validated minute-bar frame, the ordered symbol list, and the
+<code>regular_session_only</code> flag.
+<b>Output:</b> a wide DataFrame indexed by calendar date with five columns: <code>AAPL</code>, <code>JPM</code>,
+<code>TSLA</code>, <code>SPY</code>, <code>portfolio</code>.
+<b>Role:</b> this is the <em>only</em> table the five models ever see. Everything the backtest does traces back to it.</p></div>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$r_{i,t}=\ln\!\left(\frac{C_{i,t}}{C_{i,t-1}}\right)
+\qquad\qquad
+r_{\text{port},t}=\frac{1}{N}\sum_{i=1}^{N} r_{i,t}$$</p>
+<p class="fnote">$C_{i,t}$ is the last regular-session close price of stock $i$ on trading day $t$;
+$r_{i,t}$ is that stock's daily log return, a plain decimal (0.01 means +1 percent);
+$N=4$ is the number of stocks; $r_{\text{port},t}$ is the equal-weight portfolio return.
+Log returns are used because they add up across time, which is what the volatility models assume.</p></div>
+
+<div class="box warn"><span class="k">Trap: the portfolio column averages log returns, which is an approximation</span>
+<p>A genuine equal-weight portfolio's simple return is $\frac1N\sum_i(e^{r_{i,t}}-1)$, and its log return is
+$\ln\!\big(\frac1N\sum_i e^{r_{i,t}}\big)$ &mdash; not $\frac1N\sum_i r_{i,t}$. The two agree to first order and
+differ by a term of order the variance of the cross-section, so for daily equity moves the gap is a few basis
+points. It is small, but it is an approximation, and the same shortcut is <em>not</em> taken in the realized-variance
+module, where the code deliberately averages intraday returns before squaring.</p></div>
+
+<pre>def _append_portfolio_column(
+    panel: pd.DataFrame,
+    constituent_symbols: list[str],
+) -&gt; pd.DataFrame:
+    <span class="c">"""Append equal-weight portfolio only where all constituents exist."""</span>
+    augmented = panel.copy()
+    constituent_returns = augmented.reindex(columns=constituent_symbols)
+    complete_rows = constituent_returns.notna().all(axis=1)
+    augmented["portfolio"] = constituent_returns.mean(axis=1).where(complete_rows)
+    return augmented</pre>
+
+<div class="box why"><span class="k">Why <code>.where(complete_rows)</code> matters</span>
+<p><code>DataFrame.mean(axis=1)</code> skips missing values by default. Without the mask, a day on which only TSLA
+traded would report TSLA's return as "the portfolio return". The mask forces the portfolio to be missing unless
+all four constituents are present, so the portfolio series never silently changes its own composition.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; last close per symbol-day (implied)</span>
+<pre>date        AAPL      JPM      TSLA     SPY
+2019-01-01  (first day: no previous close, so no return)
+2019-01-02  ...       ...      ...      ...</pre></div>
+<div><span class="lab">out &mdash; daily log return panel, first three rows</span>
+<pre>symbol          AAPL       JPM      TSLA       SPY  portfolio
+date
+2019-01-02  0.000910  0.007211 -0.029224  0.008951  -0.003038
+2019-01-03  0.006724 -0.006093  0.059345  0.004834   0.016202
+2019-01-04  0.010635 -0.005999  0.009991  0.002409   0.004259
+                                                        ^
+                        (0.000910 + 0.007211 - 0.029224 + 0.008951) / 4
+                              = -0.012152 / 4 = -0.003038  &lt;- checks out</pre></div>
+</div>
+<p>Shape is <b>(1303, 5)</b>. The raw file covers 1,304 trading days; the first one produces no return because
+there is no previous close, and <code>dropna(how="all")</code> removes it.</p></div>
+
+<h3><code>_filter_regular_session()</code> &mdash; keep 09:30 to 16:00 New York</h3>
+
+<pre>    after_open = (hours &gt; MARKET_OPEN_HOUR) | (
+        (hours == MARKET_OPEN_HOUR) &amp; (minutes &gt;= MARKET_OPEN_MINUTE)
+    )
+    before_close = hours &lt; MARKET_CLOSE_HOUR
+    exactly_close = (hours == MARKET_CLOSE_HOUR) &amp; (minutes == 0)
+
+    return minute_bars.loc[after_open &amp; (before_close | exactly_close)].copy()</pre>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> minute bars with a timezone-aware <code>ts</code>.
+<b>Output:</b> the subset whose New York clock time lies in 09:30 to 16:00, with 16:00 itself included and 16:01
+excluded.
+<b>Role:</b> stops overnight and after-hours prints from becoming a daily close or contributing to realized variance.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io">
+<div><span class="lab">in &mdash; rows before</span>
+<pre>2,034,240</pre></div>
+<div><span class="lab">out &mdash; rows after</span>
+<pre>2,034,240   &lt;- zero dropped</pre></div>
+</div>
+<p>On this dataset the filter is a no-op, because the tracked file already contains only regular-session bars
+(last bar of each day is 15:59 New York, so the <code>exactly_close</code> branch never fires either). The filter earns
+its place as a guard for any replacement dataset that <em>does</em> carry after-hours prints. Verified directly on a
+four-bar synthetic day: with the flag on, the daily close is the 10:00 bar; with it off, the 16:30 after-hours
+bar wins and the return changes from 0.009756 to 0.064539.</p></div>
+
+<h2 id="s05"><span class="sec-no">05</span>Realized variance &mdash; <code>build_daily_realized_variance_panel()</code></h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>For each stock and each day, add up the squares of all 389 minute-to-minute moves. That sum is a direct
+measurement of how violent the day was, taken from the intraday data rather than estimated from a model. The
+portfolio's number is built by first forming a minute-by-minute portfolio return, then squaring &mdash; not by
+averaging the four stocks' numbers.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the same validated minute bars, the symbol list, the session flag.
+<b>Output:</b> a wide DataFrame indexed by date with the same five columns as the return panel, in
+<b>squared decimal return units per day</b> (not annualised, not a percentage).
+<b>Role:</b> feeds the feature table. It does not reach the models.</p></div>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$RV_{i,t}=\sum_{u=2}^{M}\left[\ln\!\left(\frac{P_{i,t,u}}{P_{i,t,u-1}}\right)\right]^{2}
+\qquad\qquad
+RV_{\text{port},t}=\sum_{u=2}^{M}\left(\frac{1}{N}\sum_{k=1}^{N} r_{k,t,u}\right)^{2}$$</p>
+<p class="fnote">$P_{i,t,u}$ is the price of stock $i$ at minute $u$ of day $t$; $M=390$ is the number of minute
+bars in a session, and the sum starts at $u=2$ because the first minute has no preceding bar inside the day;
+$r_{k,t,u}$ is stock $k$'s log return over minute $u$; $N=4$; $RV$ has units of squared decimal return per day.
+Expanding the portfolio square gives
+$RV_{\text{port},t}=\frac{1}{N^{2}}\sum_{k}\sum_{l}\sum_{u} r_{k,t,u}r_{l,t,u}$, which contains every
+cross-stock covariance term. Averaging the four $RV_{i,t}$ values would keep only the $k=l$ terms and would also
+use the wrong weight, $1/N$ instead of $1/N^{2}$.</p></div>
+
+<pre>    <span class="c"># Portfolio realized variance includes cross-asset covariance. Averaging</span>
+    <span class="c"># constituent variances would omit covariance and apply the wrong weights.</span>
+    intraday_return_panel = working.pivot_table(
+        index=["date", "ts"],
+        columns="symbol",
+        values="intraday_log_return",
+        aggfunc="last",
+    ).reindex(columns=symbols)
+    complete_constituent_rows = intraday_return_panel.notna().all(axis=1)
+    equal_weight_intraday_return = intraday_return_panel.mean(axis=1).where(
+        complete_constituent_rows
+    )
+    portfolio_realized_variance = (
+        equal_weight_intraday_return.pow(2).groupby(level="date").sum(min_count=1)
+    )</pre>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; minute bars for 16 March 2020 (the COVID crash week)</span>
+<pre>389 minute-to-minute log returns per stock, four stocks</pre></div>
+<div><span class="lab">out &mdash; realized variance panel, rows around that week</span>
+<pre>symbol          AAPL       JPM      TSLA       SPY  portfolio
+date
+2020-03-12  0.000013  0.000007  0.000038  0.000005  0.000004
+2020-03-13  0.000011  0.000008  0.000038  0.000006  0.000004
+2020-03-16  0.000011  0.000010  0.000070  0.000006  0.000007
+2020-03-17  0.000012  0.000007  0.000040  0.000005  0.000004</pre></div>
+</div>
+<p>On 16 March 2020 the portfolio number is <b>6.748e-06</b> while the plain average of the four stocks'
+numbers is <b>2.432e-05</b> &mdash; a ratio of 0.28, close to the $1/N=0.25$ you would get if the four stocks moved
+independently. The covariance-aware construction is what makes diversification visible; the naive average would
+have overstated portfolio risk by roughly 3.6 times on that day. Taking the square root,
+$\sqrt{6.748\times10^{-6}}=0.0026$, so the portfolio's intraday movement that day amounted to about
+0.26 percent of standard deviation.</p></div>
+
+<div class="box why"><span class="k">Why the first minute of each day is missing on purpose</span>
+<p><code>intraday_log_return</code> is computed with <code>groupby(["symbol","date"]).transform(...shift(1))</code>, so the
+09:30 bar has no return. That deliberately excludes the overnight gap. Realized variance is meant to measure
+<em>intraday</em> movement; folding in the overnight jump would mix two different things and inflate the number on
+earnings days. It is worth knowing, though, that the daily returns in section 04 are close-to-close and therefore
+<em>do</em> include the overnight gap. The two series measure different windows.</p></div>
+
+<div class="box flag"><span class="k">The weakness, stated honestly</span>
+<p>The realized-variance panel has <b>1,304</b> rows while the return panel has <b>1,303</b>: realized variance
+needs only one day of data, returns need two. The pipeline patches this with
+<code>daily_realized_variance.reindex(daily_returns.index)</code> before building features. If a future caller forgets
+that reindex, <code>build_feature_table()</code> raises rather than silently misaligning &mdash; which is the right
+failure, but it is a landmine that exists only because the two builders disagree about their first row.</p></div>
+
+<h2 id="s06"><span class="sec-no">06</span>The feature table &mdash; <code>build_feature_table()</code></h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Reshape the two wide panels into one long table with a row per stock per day, carrying tomorrow's return as
+the thing to predict and several backward-looking volatility measures as the things to predict it with.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the daily return panel and the date-aligned realized-variance panel.
+<b>Output:</b> a long DataFrame, one row per (date, asset), with a target column and five or six feature columns.
+<b>Role:</b> written to <code>outputs/runs/feature_table.parquet</code>. <b>Nothing else in the pipeline reads it.</b></p></div>
+
+<pre>        <span class="c"># Target at date t is next-day return R_{t+1}.</span>
+        target_next_day_return = asset_returns.shift(-1)
+
+        asset_frame = pd.DataFrame(
+            {
+                "date": daily_returns.index,
+                "asset": asset_name,
+                "target_next_day_return": target_next_day_return,
+                "rv_t": asset_realized_variance,
+                "rv_lag_1": asset_realized_variance.shift(1),
+                "rv_mean_5": asset_realized_variance.shift(1).rolling(5).mean(),
+                "rv_mean_21": asset_realized_variance.shift(1).rolling(21).mean(),
+                "abs_return_lag_1": asset_returns.abs().shift(1),
+            }
+        )
+        if include_realized_return_volatility_5d:
+            asset_frame["return_volatility_5"] = asset_returns.shift(1).rolling(5).std()</pre>
+
+<div class="box why"><span class="k">Why the timing is safe</span>
+<p>Read the shifts carefully. The row labelled date $t$ carries <code>target_next_day_return</code> $=r_{t+1}$, the
+return you are trying to predict. Every feature on that row is known by the close of day $t$: <code>rv_t</code> is
+that same day's intraday variance, finished at 16:00; the others are shifted back a further day. So the newest
+piece of information used to predict $r_{t+1}$ is measured at the close of day $t$, before $r_{t+1}$ exists.
+There is no look-ahead here. It is also mildly conservative: $|r_t|$ is known at the close of day $t$, yet the
+code offers only $|r_{t-1}|$ as <code>abs_return_lag_1</code>.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; two wide panels, both 1303 rows &times; 5 columns</span>
+<pre>daily_returns    : index=date, columns=[AAPL JPM TSLA SPY portfolio]
+realized_variance: index=date, columns=[AAPL JPM TSLA SPY portfolio]</pre></div>
+<div><span class="lab">out &mdash; long feature table, first SPY rows</span>
+<pre>      date       asset  target_next_day_return    rv_t  rv_lag_1  rv_mean_5  rv_mean_21  abs_return_lag_1  return_volatility_5
+2019-01-31   SPY                 -0.012720  0.000001  0.000003   0.000002    0.000002          0.030159             0.019686
+2019-02-01   SPY                  0.005652  0.000001  0.000001   0.000002    0.000002          0.006961             0.018476
+2019-02-04   SPY                  0.000245  0.000001  0.000001   0.000002    0.000002          0.012720             0.014292
+                                     ^
+              note row two: the 2019-02-01 target (0.005652) is not the
+              same number as the 2019-02-04 abs_return_lag_1 (0.012720),
+              but 0.012720 IS the 2019-01-31 target &lt;- the lag lines up</pre></div>
+</div>
+<p>Shape is <b>(6405, 9)</b>. That is 5 series &times; 1,281 rows each. Of the 1,303 available dates, 21 are lost at the
+front to the 21-day rolling mean warm-up and 1 at the back to the missing next-day target: 1303 &minus; 21 &minus; 1 = 1281.</p></div>
+
+<div class="box flag"><span class="k">The weakness, stated honestly: this table is a dead end</span>
+<p>Grep the repository for <code>feature_table</code> and you will find it written to disk, asserted on in one test,
+printed in one notebook cell &mdash; and read by no model. The five forecasters in section 08 and 09 all take a plain
+one-dimensional array of past returns and nothing else. The realized-variance work in section 05 therefore
+influences <em>no reported result</em>. That is an honest description of the current state, not a criticism of the
+maths: the table is correctly built and correctly timed, it is simply unconsumed. Anyone reading this project
+should say so plainly rather than let a reader assume the intraday data drives the forecasts.</p></div>
+
+<h2 id="s07"><span class="sec-no">07</span>The model contract &mdash; <code>VaRModel</code> and the registry</h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>All five forecasters answer the same four questions, so the backtest loop can treat them identically. The one
+unusual question is <code>observe()</code>: "here is what actually happened, adjust yourself." Four of the five ignore
+it; the conformal model is the reason it exists.</p></div>
+
+<pre>class VaRModel(ABC):
+    @abstractmethod
+    def fit(self, returns: np.ndarray) -&gt; None: ...
+
+    @abstractmethod
+    def predict_lower_quantile(self, alpha: float) -&gt; float: ...
+
+    def predict_var(self, alpha: float) -&gt; float:
+        <span class="c">"""Return the positive loss threshold implied by the lower quantile."""</span>
+        lower_quantile = self.predict_lower_quantile(alpha=alpha)
+        return max(-lower_quantile, 0.0)
+
+    @abstractmethod
+    def predict_es(self, alpha: float) -&gt; float: ...
+
+    @abstractmethod
+    def predict_interval(self, alpha: float) -&gt; tuple[float, float]: ...
+
+    def observe(self, realized_return: float, alpha: float | None = None) -&gt; None:
+        <span class="c">"""Update model state after observing the next-day realized return."""</span>
+        del realized_return
+        del alpha</pre>
+
+<div class="box def"><span class="k">The two numbers, and why they are different</span>
+<p>$$q_{t,\alpha}\ \text{is the return quantile}\qquad
+\mathrm{VaR}_{t,\alpha}=\max(-q_{t,\alpha},\,0)$$</p>
+<p class="fnote">$\alpha$ is the target left-tail probability, for example $\alpha=0.05$ meaning "the level that
+should be breached one day in twenty". $q_{t,\alpha}$ is a <em>return</em>, so it is normally negative
+(&minus;0.021 means "a 2.1 percent loss"). $\mathrm{VaR}_{t,\alpha}$ is a <em>loss amount</em>, so it is reported
+as a positive number and floored at zero. A violation is recorded when $r_{t}\lt q_{t,\alpha}$ &mdash; always
+against $q$, never against $\mathrm{VaR}$.</p></div>
+
+<div class="box warn"><span class="k">Trap: never score against the floored number</span>
+<p>The floor at zero is a reporting convention: "you cannot lose a negative amount". But if the raw quantile is
+positive (a strongly trending window can produce that at $\alpha=0.05$), the floored VaR is exactly 0, and
+comparing the realized return to 0 would call every down day a violation. The backtest and the pinball loss both
+use <code>predicted_lower_quantile</code>, the unfloored number, so the score and the adaptive update cannot
+disagree. Both are stored in the results file, which is why the columns <code>predicted_var</code> and
+<code>predicted_lower_quantile</code> are mirror images in the sample rows in section 10.</p></div>
+
+<h3><code>build_model_factories()</code></h3>
+
+<pre>        "filtered_historical": lambda alpha: FilteredHistoricalSimulationVaRModel(
+            simulations=config.filtered_historical.simulations,
+            p=config.garch.p,
+            q=config.garch.q,
+            <span class="c"># Tie bootstrap draws to alpha so multi-alpha runs stay reproducible.</span>
+            rng=np.random.default_rng(config.run.seed + int(alpha * 100_000) + 17),
+        ),
+        "conformal": lambda alpha: AdaptiveConformalVaRModel(
+            window=config.conformal.window,
+            mean_window=config.conformal.mean_window,
+            learning_rate=config.conformal.learning_rate,
+            initial_alpha=alpha,
+        ),</pre>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the config object.
+<b>Output:</b> a dictionary from model name to a function that takes $\alpha$ and returns a fresh model.
+<b>Role:</b> lets the backtest build one independent model per (asset, model, $\alpha$) so no state leaks between them.</p></div>
+
+<div class="box why"><span class="k">Why the factories take $\alpha$</span>
+<p>The conformal model carries an internal tail level that drifts as it sees errors. It has to <em>start</em> at the
+level you asked for, so $\alpha$ must be known at construction, not just at prediction time. The other four ignore
+the argument. The filtered-historical model also uses $\alpha$ to derive its random seed, so the 5 percent run and
+the 1 percent run draw different bootstrap samples while both stay reproducible: seed
+$= 11 + \lfloor 0.05\times100000\rfloor + 17 = 5028$ and $11 + 1000 + 17 = 1028$.</p></div>
+
+<div class="box flag"><span class="k">The weakness, stated honestly</span>
+<p>The seed depends on $\alpha$ but not on the asset. The factory is called once per (asset, $\alpha$) pair, so
+AAPL, JPM, TSLA, SPY and the portfolio all draw the <em>same sequence of bootstrap indices</em> at the 5 percent
+level. Their standardized shock pools differ, so the resulting numbers differ; but the sampling noise across the
+five series is perfectly synchronised rather than independent. With 10,000 draws the sampling noise is tiny, so
+this changes nothing material &mdash; it is worth knowing before someone treats the five series as five
+independent trials.</p></div>
+
+<h2 id="s08"><span class="sec-no">08</span>The four benchmarks</h2>
+
+<h3>1. <code>HistoricalSimulationVaRModel</code> &mdash; just look at the past</h3>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the 1,150-day training array; it keeps the last <code>window</code> = 250.
+<b>Output:</b> the empirical $\alpha$ quantile of those 250 numbers.
+<b>Role:</b> the "do nothing clever" baseline that every risk desk actually uses.</p></div>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$q_{t,\alpha}=\widehat{F}^{-1}_{250}(\alpha),
+\qquad
+\mathrm{ES}_{t,\alpha}=\max\!\left(-\frac{1}{|T|}\sum_{u\in T} r_u,\ \mathrm{VaR}_{t,\alpha}\right),
+\quad T=\{u: r_u\le q_{t,\alpha}\}$$</p>
+<p class="fnote">$\widehat{F}^{-1}_{250}$ is the empirical inverse distribution function of the last 250 daily
+returns, computed by <code>np.quantile</code> with linear interpolation between order statistics.
+$\mathrm{ES}$ is Expected Shortfall: the average loss <em>given</em> that the loss exceeded VaR. $T$ is the set of
+training days whose return was at or below the quantile. The outer $\max$ prevents ES from ever printing below VaR,
+which would be nonsense.</p></div>
+
+<div class="box warn"><span class="k">Trap: the 1 percent quantile of 250 numbers is two and a half observations</span>
+<p>At $\alpha=0.01$ with 250 points, <code>np.quantile</code> interpolates at position $0.01\times249=2.49$, that is
+between the third and fourth worst days in the window. The estimate is driven by two or three data points and
+jumps whenever one of them rolls out of the window. This is a known property of historical simulation, not a
+coding error, and it is why the 1 percent results in section 11 are much noisier than the 5 percent ones.</p></div>
+
+<h3>2 and 3. <code>GarchVaRModel</code> &mdash; a volatility model with a distribution bolted on</h3>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Fit a model that says "today's volatility depends on yesterday's volatility and yesterday's surprise", forecast
+tomorrow's volatility from it, then read the tail off a bell curve (or a fatter-tailed cousin) scaled to that
+volatility.</p></div>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$r_u=\mu+\varepsilon_u,\qquad
+\varepsilon_u=\sigma_u z_u,\qquad
+\sigma_u^{2}=\omega+\alpha_1\varepsilon_{u-1}^{2}+\beta_1\sigma_{u-1}^{2}$$
+$$q_{t,\alpha}=\mu+\sigma_{t}\,z_{\alpha}$$</p>
+<p class="fnote">$\mu$ is a constant average return; $\varepsilon_u$ is the day's surprise; $\sigma_u$ is the
+conditional volatility (standard deviation) on day $u$; $z_u$ is a standardized shock with mean 0 and variance 1;
+$\omega,\alpha_1,\beta_1$ are the three fitted GARCH parameters, with $\alpha_1$ controlling how sharply
+volatility reacts to a shock and $\beta_1$ how long it stays elevated; $\sigma_t$ is the one-day-ahead volatility
+forecast; $z_\alpha$ is the $\alpha$ quantile of the shock distribution. Here $p=q=1$, taken from
+<code>config.toml</code>.</p></div>
+
+<div class="box def"><span class="k">The formula &mdash; the two shock distributions</span>
+<p>Normal shocks: $z_\alpha=\Phi^{-1}(\alpha)$ and $\;E[Z\mid Z\le z_\alpha]=-\dfrac{\phi(z_\alpha)}{\alpha}$.</p>
+<p>Student-t shocks with $\nu$ degrees of freedom, rescaled to unit variance:</p>
+<p>$$z_\alpha=t^{-1}_\nu(\alpha)\sqrt{\frac{\nu-2}{\nu}},
+\qquad
+E[Z\mid Z\le z_\alpha]=-\left(\frac{\nu+\big(t^{-1}_\nu(\alpha)\big)^{2}}{(\nu-1)\,\alpha}\right)
+f_\nu\!\big(t^{-1}_\nu(\alpha)\big)\sqrt{\frac{\nu-2}{\nu}}$$</p>
+<p class="fnote">$\Phi^{-1}$ and $\phi$ are the standard normal inverse distribution function and density;
+$t^{-1}_\nu$ and $f_\nu$ are the raw Student-t inverse distribution function and density with $\nu$ degrees of
+freedom, $\nu$ being fitted by the <code>arch</code> package (and defaulting to 8 if the fit did not report it).
+A raw Student-t has variance $\nu/(\nu-2)$, not 1, so both the quantile and the tail mean are multiplied by
+$\sqrt{(\nu-2)/\nu}$ to make the shock unit-variance and comparable with $\sigma_t$. This requires $\nu\gt2$,
+which the fitting package enforces.</p></div>
+
+<div class="box why"><span class="k">Why the returns are multiplied by 100 before fitting</span>
+<p><code>arch_model(clean_returns * 100.0, ..., rescale=False)</code>. Daily log returns are around 0.01, so their
+variance is around 0.0001 and the GARCH intercept $\omega$ lands near $10^{-6}$. Optimisers do badly on parameters
+that small. Multiplying by 100 puts everything in percentage points where the numbers are order 1. Both
+<code>_forecast_location_scale</code> methods then divide the mean by 100 and the volatility by 100 (the variance by
+10,000, implicitly, via the square root) to return to decimals. Get one of those divisions wrong and every VaR
+number is off by a factor of 100 &mdash; the sample box below is the check that they are right.</p></div>
+
+<pre>    def fit(self, returns: np.ndarray) -&gt; None:
+        <span class="c">"""Estimate the GARCH model on percent-scaled daily log returns."""</span>
+        clean_returns = np.asarray(returns, dtype=float)
+        self._fallback_mean = float(np.mean(clean_returns))
+        self._fallback_sigma = float(max(np.std(clean_returns, ddof=1), MIN_SIGMA))
+        <span class="c"># A failed rolling refit must not reuse parameters from the prior date.</span>
+        self._last_result = None
+        ...
+        try:
+            ...
+            self._last_result = fitted_model.fit(disp="off", show_warning=False)
+        except Exception as error:
+            logging.warning("GARCH fit failed; using fallback state: %s", error)</pre>
+
+<div class="box why"><span class="k">Why <code>self._last_result = None</code> comes before the try block</span>
+<p>The same model object is reused for all 153 evaluation dates. If a refit on day 40 fails and the previous
+result were left in place, day 40's forecast would silently be produced from day 39's parameters &mdash; using
+information from a window the model was told to discard, and hiding the failure. Clearing the state first means a
+failed fit falls back to the plain mean and standard deviation of the <em>current</em> window, which is honest and
+visible. A test in <code>tests/unit/test_models_and_backtest.py</code> monkeypatches <code>arch_model</code> to
+throw and asserts exactly this.</p></div>
+
+<div class="box warn"><span class="k">Trap: <code>except Exception</code> with only a warning</span>
+<p>Both GARCH-based models catch every exception and log at WARNING level. The pipeline configures no logging
+handler, so on a default run these warnings go to standard error via the root logger's last-resort handler and are
+easy to miss in a long run's output. If a fit silently failed on many days, the results would quietly become a
+rolling-standard-deviation model. The saving grace is that the fallback is a sane model rather than a crash or a
+NaN, and the fallback numbers are close enough to the fitted ones that nothing would look obviously broken &mdash;
+which is exactly what makes it worth stating out loud.</p></div>
+
+<h3>4. <code>FilteredHistoricalSimulationVaRModel</code> &mdash; GARCH scale, real-world shock shape</h3>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Use GARCH to say how big tomorrow is likely to be, but instead of assuming the shock follows a bell curve, draw
+10,000 shocks at random from the shocks that actually happened in the training window.</p></div>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$\hat z_u=\frac{100\,r_u-\hat\mu}{\hat\sigma_u},
+\qquad
+\tilde r^{(j)}=\hat\mu_{t+1}+\hat\sigma_{t+1}\,\hat z_{B_j},\ \ j=1,\dots,10000,
+\qquad
+q_{t,\alpha}=\widehat{F}^{-1}_{10000}(\alpha)$$</p>
+<p class="fnote">$\hat z_u$ is the standardized shock on training day $u$, obtained by removing the fitted mean
+$\hat\mu$ and dividing by the fitted conditional volatility $\hat\sigma_u$ (both in percentage points, which is
+why $r_u$ is multiplied by 100); $B_j$ is a uniformly random index into the pool of standardized shocks, drawn
+with replacement; $\hat\mu_{t+1}$ and $\hat\sigma_{t+1}$ are the one-day-ahead forecasts in decimal units;
+$\tilde r^{(j)}$ is one simulated next-day return; $\widehat F^{-1}_{10000}$ is the empirical quantile of the
+10,000 simulated returns.</p></div>
+
+<div class="box why"><span class="k">Why this usually beats plain GARCH-normal</span>
+<p>Plain GARCH-normal gets the <em>scale</em> of tomorrow right but assumes the <em>shape</em> is a bell curve, which
+understates how often extreme days happen. Historical simulation gets the shape right but assumes the scale never
+changes, so it is slow to react after a calm stretch. Filtered historical simulation takes the reacting scale from
+one and the fat-tailed shape from the other. That is the standard argument, and the numbers in section 11 are
+consistent with it, though 153 days is far too short to call it proven.</p></div>
+
+<div class="box data"><span class="k">Sample data &mdash; all four benchmarks on one real day</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; SPY, training window 2019-01-02 to 2023-05-30 (1,150 returns), forecasting 2023-05-31</span>
+<pre>alpha = 0.05, realized return on 2023-05-31 = -0.001112</pre></div>
+<div><span class="lab">out &mdash; each model's answer</span>
+<pre>model                 q(0.05)      VaR        ES     violation
+historical           -0.016877  0.016877  0.023950   False
+garch_normal         -0.014544  0.014544  0.018382   False
+garch_student_t      -0.014551  0.014551  0.018897   False
+filtered_historical  -0.013783  0.013783  0.018491   False
+conformal            -0.020608  0.020608  0.026746   False   &lt;- the widest
+</pre></div>
+</div>
+<p>Read the first row as: "historical simulation expects that a loss worse than 1.69 percent should happen about
+one day in twenty, and on the days it does happen the average loss should be about 2.40 percent." All five numbers
+are sane percentages of a day's move, which is the check that the &times;100 and &divide;100 conversions in the GARCH
+code are consistent.</p></div>
+
+<h2 id="s09"><span class="sec-no">09</span>The adaptive conformal model</h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Predict tomorrow with a simple 20-day average. Look back at the last 500 days and record, for each of them, how
+far below that day's own 20-day average the return actually landed &mdash; recording zero on days it landed above.
+Sort those shortfalls and pick the one at a specific rank. Subtract it from today's 20-day average, and that is the
+boundary. Then, every day, nudge the internal rank up or down depending on whether the boundary was breached.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the trailing return array; it keeps the last <code>window</code> = 500.
+<b>Output:</b> a lower-tail return quantile, plus a rough Expected Shortfall and a diagnostic interval.
+<b>Role:</b> the method the project exists to test. It is the only model whose <code>observe()</code> does anything.</p></div>
+
+<h3>Step 1: build the scores &mdash; <code>fit()</code></h3>
+
+<pre>        <span class="c"># One-sided scores compare each rolling-mean forecast to the realized return.</span>
+        rolling_centers = self._compute_rolling_mean(trailing_returns)
+        realized_segment = trailing_returns[self.mean_window :]
+        self._center = float(np.mean(trailing_returns[-self.mean_window :]))
+        raw_shortfalls = rolling_centers - realized_segment
+        self._scores = np.maximum(raw_shortfalls, 0.0)
+        self._pseudo_returns = self._center - self._scores
+        self._last_lower_quantile = 0.0</pre>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$\hat\mu_u=\frac{1}{m}\sum_{k=u-m}^{u-1} r_k
+\qquad\qquad
+s_u=\max\!\big(\hat\mu_u-r_u,\ 0\big)$$</p>
+<p class="fnote">$m$ is <code>mean_window</code> = 20, the number of past days averaged; $\hat\mu_u$ is the
+prediction made for day $u$ using only days strictly before $u$; $r_u$ is what actually happened on day $u$;
+$s_u$ is the <em>nonconformity score</em>, meaning "how badly did the prediction miss, and only in the direction I
+care about". Because the tail of interest is the loss tail, an overshoot on the upside scores zero. With a window
+of 500 returns and $m=20$, exactly $500-20=480$ scores are produced.</p></div>
+
+<div class="box why"><span class="k">Why the score is one-sided</span>
+<p>The usual conformal score is $|\hat\mu_u-r_u|$, which builds a two-sided interval. That wastes half the
+calibration sample on the upside, where a risk manager has no exposure. Clipping at zero means every score
+measures a downside miss, so the whole 480-point sample is spent describing the shape of the loss tail. The price
+is that about half the scores are exactly zero &mdash; on this window, 49.6 percent of them &mdash; so the score
+distribution has a large point mass at zero. That is harmless for reading a high rank off the sorted array, but it
+does distort the Expected Shortfall estimate, which is why the code refuses to publish an ES verdict for this
+model (section 11).</p></div>
+
+<h3>Step 2: pick the rank &mdash; <code>_finite_sample_upper_quantile()</code></h3>
+
+<pre>        sample_size = len(scores)
+        rank = int(np.ceil((sample_size + 1) * (1.0 - alpha)))
+        clipped_rank = int(np.clip(rank, 1, sample_size))
+        return float(np.partition(scores, clipped_rank - 1)[clipped_rank - 1])</pre>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$k=\Big\lceil (n+1)\,(1-a_t) \Big\rceil,
+\qquad
+\tilde k=\min\!\big(\max(k,1),\,n\big),
+\qquad
+q_{t}= \hat\mu_{T} - s_{(\tilde k)}$$</p>
+<p class="fnote">$n$ is the number of calibration scores (480 here); $a_t$ is the model's <em>internal</em> tail
+level, which starts at the requested $\alpha$ and then drifts; $k$ is the rank to read off the sorted scores;
+$s_{(\tilde k)}$ is the $\tilde k$-th smallest score; $\hat\mu_T$ is the 20-day average as of today, the point
+forecast for tomorrow; $q_t$ is the returned lower quantile. The $(n+1)$ rather than $n$ is the standard
+split-conformal finite-sample correction &mdash; it makes the interval very slightly wider so that the guarantee
+holds exactly on a finite sample rather than only asymptotically.</p></div>
+
+<div class="box why"><span class="k">Why <code>np.partition</code> and not <code>np.sort</code></span>
+<p>Only one order statistic is needed. <code>np.partition</code> does a partial sort that puts the $\tilde k$-th
+smallest element in its correct slot in $O(n)$ time, instead of $O(n\log n)$ for a full sort. It runs several
+thousand times per pipeline run, since each of the 1,530 conformal steps calls
+<code>predict_lower_quantile()</code> three times over &mdash; once directly, and once each inside
+<code>predict_interval()</code> and <code>predict_es()</code>. It is nowhere near the bottleneck, but it is the
+right tool and it signals that the author knew only one element was wanted.</p></div>
+
+<div class="box warn"><span class="k">Trap: the clip is doing real work at the 1 percent level</span>
+<p>With $n=480$ and $a_t$ near 0.01, $k=\lceil 481\times0.99\rceil=477$, comfortably inside the array. But
+<code>observe()</code> can push $a_t$ down as far as <code>MIN_ALPHA</code> = 0.001, giving
+$k=\lceil481\times0.999\rceil=481\gt480$. Without the clip that would be an <code>IndexError</code>. With it, the model
+returns the largest score it has ever seen and cannot become any more conservative. That ceiling is real: the
+model's answer saturates rather than growing without bound.</p></div>
+
+<h3>Step 3: adapt &mdash; <code>observe()</code></h3>
+
+<pre>    def observe(self, realized_return: float, alpha: float | None = None) -&gt; None:
+        <span class="c">"""Update the adaptive tail level with a one-sided target-seeking rule."""</span>
+        del alpha
+        <span class="c"># Lower alpha after a breach, which selects a higher score rank and a more</span>
+        <span class="c"># conservative next boundary; raise it after a quiet day.</span>
+        breach_indicator = float(realized_return &lt; self._last_lower_quantile)
+        updated_alpha = self.current_alpha + self.learning_rate * (
+            self._target_alpha - breach_indicator
+        )
+        self.current_alpha = float(np.clip(updated_alpha, MIN_ALPHA, MAX_ALPHA))</pre>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$a_{t+1}=\mathrm{clip}\Big(a_t+\gamma\big(\alpha-\mathbf{1}\{r_t\lt q_t\}\big),\ 0.001,\ 0.999\Big)$$</p>
+<p class="fnote">$a_t$ is the internal tail level on day $t$; $\gamma$ is <code>learning_rate</code> = 0.005;
+$\alpha$ is the target the user asked for, 0.05 or 0.01; $\mathbf{1}\{r_t\lt q_t\}$ is 1 if the realized return
+fell below the boundary and 0 otherwise. This is the update rule from Gibbs and Cand&egrave;s' adaptive conformal
+inference. Read the sign carefully: a breach makes the bracket $\alpha-1$, which is negative, so $a_{t+1}$
+<em>falls</em>; a lower $a$ means a higher rank $k$, a larger score, and a lower (more conservative) boundary
+tomorrow. A quiet day makes the bracket $+\alpha$, so $a$ creeps up and the boundary tightens. At the fixed point
+the long-run breach frequency equals $\alpha$.</p></div>
+
+<div class="box data"><span class="k">Sample data &mdash; every internal number for SPY on 2023-05-31</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; the last 500 of the 1,150 training returns</span>
+<pre>window       = 500 returns
+mean_window  = 20
+alpha_t      = 0.05  (first day, so still the requested level)</pre></div>
+<div><span class="lab">out &mdash; the chain from scores to boundary to next alpha</span>
+<pre>n calibration scores  = 480              (= 500 - 20)
+score range           = 0.000000 .. 0.038079
+share of scores == 0  = 49.58%           (the one-sided clip)
+centre (20-day mean)  = -0.00144256
+rank k = ceil((480+1) * (1 - 0.05)) = ceil(456.95) = 457
+selected score s_(457)= 0.01916584
+lower quantile        = -0.00144256 - 0.01916584
+                      = -0.02060840   &lt;- subtract, exactly as the formula says
+
+realized 2023-05-31   = -0.00111244    -&gt; no breach
+new alpha             = 0.05 + 0.005*(0.05 - 0) = 0.05025
+had it been a breach  = 0.05 + 0.005*(0.05 - 1) = 0.04525</pre></div>
+</div>
+<p>Every one of those numbers can be checked by hand from the two lines above it, which is the point of showing
+them. Note the asymmetry in the update: a quiet day moves $a$ by $+0.00025$, a breach moves it by
+$-0.00475$ &mdash; nineteen times further. That is what makes the model react fast to a loss and relax slowly
+afterwards.</p></div>
+
+<div class="box flag"><span class="k">The weakness, stated honestly</span>
+<p>Split-conformal prediction's finite-sample coverage guarantee requires the calibration scores and the new score
+to be <em>exchangeable</em> &mdash; loosely, that shuffling their order would not change the joint distribution.
+Daily equity returns are famously not exchangeable: volatility clusters, so a score from March 2020 and a score
+from July 2021 are drawn from very different conditions. The code uses the exchangeable-case rank
+$\lceil(n+1)(1-a)\rceil$ anyway, and the docstring says so in as many words. The honest position is that conformal
+theory supplies the <em>construction</em> here, and the walk-forward backtest supplies the <em>evidence</em>. The
+adaptive update in step 3 exists precisely because the static guarantee cannot be relied upon.</p></div>
+
+<div class="box flag"><span class="k">A second weakness: the Expected Shortfall is a rough proxy</span>
+<p><code>predict_es()</code> averages the "pseudo returns" $\hat\mu_T-s_u$ that lie below the boundary. But roughly
+half the scores are zero, so half the pseudo returns sit exactly on $\hat\mu_T$ &mdash; a synthetic point mass that
+never existed in the market. The resulting ES is defensible as a rough tail-severity number, and it is not
+defensible as a statistic to run a formal test on. The metrics module agrees: it labels the conformal model's ES
+verdict <code>not_reported</code> rather than passing or failing it.</p></div>
+
+<h2 id="s10"><span class="sec-no">10</span>The walk-forward loop &mdash; <code>run_backtest()</code></h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>For each series, for each model, for each tail level: start at day 1,151, refit on the previous 1,150 days, ask
+for a forecast, compare it to what actually happened that day, write one row, tell the model the answer, take one
+step forward, repeat.</p></div>
+
+<pre>            for evaluation_index in range(calibration_window, len(asset_series)):
+                <span class="c"># Fit on the trailing window, then score the next realized return.</span>
+                training_returns = asset_series.iloc[
+                    evaluation_index - calibration_window : evaluation_index
+                ].to_numpy(dtype=float)
+                evaluation_date = asset_series.index[evaluation_index]
+                realized_return = float(asset_series.iloc[evaluation_index])
+
+                for alpha, model in models_by_alpha.items():
+                    model.fit(training_returns)
+                    lower_quantile = model.predict_lower_quantile(alpha=alpha)
+                    ...
+                    is_violation = realized_return &lt; lower_quantile
+                    ...
+                    model.observe(realized_return=realized_return, alpha=alpha)</pre>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the wide return panel, the list of $\alpha$ values, the window length, the factory dictionary.
+<b>Output:</b> one long DataFrame with 11 columns and one row per (date, asset, model, $\alpha$).
+<b>Role:</b> produces every number the evaluation module scores.</p></div>
+
+<div class="box why"><span class="k">Where look-ahead is prevented, precisely</span>
+<p>This is the line a reviewer will point at. Python's slice <code>iloc[i - w : i]</code> excludes position
+<code>i</code>. So the training array runs from position $i-1150$ up to and <em>including</em> $i-1$, while
+<code>realized_return</code> is read from position $i$. The day being predicted is never inside the window used to
+predict it. Verified on real data: with $i=1150$ for SPY, the training window is 2019-01-02 to 2023-05-30 with
+1,150 elements, and the evaluation date is 2023-05-31 &mdash; the very next trading day. The
+<code>observe()</code> call comes <em>after</em> the row is written, so the adaptive state used for a forecast never
+contains that forecast's own outcome.</p></div>
+
+<div class="box why"><span class="k">Why one model object per $\alpha$, and per asset</span>
+<p><code>models_by_alpha = {alpha: model_factory(alpha) for alpha in alphas}</code> sits inside the asset loop and the
+model loop. That means a fresh conformal model for AAPL at 5 percent, another for AAPL at 1 percent, another for
+JPM at 5 percent, and so on &mdash; twenty-five combinations in all, each carrying its own drifting $a_t$. Sharing
+one object would let AAPL's breaches tighten JPM's boundary, which is nonsense.</p></div>
+
+<div class="box data"><span class="k">Sample data</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; daily_returns, shape (1303, 5), calibration_window = 1150</span>
+<pre>1303 - 1150 = 153 evaluation dates per series
+153 x 5 assets x 5 models x 2 alphas = 7650 rows</pre></div>
+<div><span class="lab">out &mdash; backtest_results.parquet, SPY / conformal / alpha=0.05</span>
+<pre>      date  asset      model  alpha  predicted_var  predicted_es  predicted_lower_quantile  interval_lower  interval_upper  actual_return  violation
+2023-05-31    SPY  conformal   0.05       0.020608      0.026746                 -0.020608       -0.020608        0.017723      -0.001112      False
+2023-06-01    SPY  conformal   0.05       0.020324      0.026462                 -0.020324       -0.020324        0.018008       0.019542      False
+2023-06-02    SPY  conformal   0.05       0.019399      0.025537                 -0.019399       -0.019399        0.018933       0.002510      False
+                                                ^                                     ^
+                     predicted_var is just -1 x predicted_lower_quantile here,
+                     because the quantile is negative. See the trap in section 07.</pre></div>
+</div>
+<p>Actual shape of the file: <b>(7650, 11)</b>, covering <b>153</b> dates from 2023-05-31 to 2023-12-29, five assets
+and five models. Watch the boundary tighten day by day (0.020608, 0.020324, 0.019399) as quiet days push $a_t$
+upward &mdash; the adaptation from section 09, visible in the output.</p></div>
+
+<div class="box flag"><span class="k">The weakness, stated honestly: 1,150 days of training leaves seven months of testing</span>
+<p>The data covers 1,303 trading days. Spending 1,150 of them on the first fit leaves 153 evaluation days,
+all inside 2023. At $\alpha=0.05$ that is an expected 7.65 violations; at $\alpha=0.01$ it is 1.53. You cannot
+distinguish models on a sample that thin, and the summary tables in section 11 report exact binomial intervals
+specifically so nobody pretends otherwise. It also means three of the four configured evaluation periods
+(<code>covid</code>, <code>rate_shock</code>, <code>post_covid</code>) contain <em>zero</em> rows and vanish from the
+output &mdash; the summary file has only the <code>full</code> period in it.</p></div>
+
+<div class="box warn"><span class="k">Trap: <code>dropna()</code> before positional slicing</span>
+<p><code>asset_series = sorted_returns[asset_name].dropna()</code> removes missing days, and the loop then indexes by
+<em>position</em>. If a series had a two-week hole, the "previous 1,150 days" would silently span a longer calendar
+stretch and the "next day" would be the next <em>available</em> day, not literally tomorrow. On this dataset the
+panel is complete, so it does not bite. On a dataset with halted or newly listed names, it would, and nothing in
+the code would warn you.</p></div>
+
+<div class="box warn"><span class="k">Trap: the loop refits every model on every day</span>
+<p><code>model.fit(training_returns)</code> is inside the innermost loop, so each of the three GARCH-based models is
+re-estimated $153\times5\times2=1530$ times, roughly 4,590 numerical optimisations per run on 1,150 observations
+each. That is where essentially all of the 1 minute 51 second runtime goes &mdash; about 24 milliseconds per fit.
+It is also the <em>correct</em> thing to do: refitting is what makes it a genuine walk-forward test rather than a
+single in-sample fit reused. Runtime scales with the number of assets, models and tail levels, so adding three more
+$\alpha$ values would take it past four minutes.</p></div>
+
+<h2 id="s11"><span class="sec-no">11</span>Scoring &mdash; <code>compute_summary_metrics()</code></h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>Slice the 7,650 forecast rows into named date periods, group them by series, model and tail level, and for each
+group answer: how often was the boundary breached, is that count believable, how accurate were the forecasts, and
+were the losses on breach days as bad as predicted.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> the backtest results frame and the evaluation section of the config.
+<b>Output:</b> one row per (period, asset, model, $\alpha$) with 24 columns.
+<b>Role:</b> the final artifact. <code>outputs/runs/summary_metrics.parquet</code>, shape <b>(50, 24)</b> on this run.</p></div>
+
+<h3>Pinball loss &mdash; the accuracy number</h3>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$L_\alpha(r,q)=\big(\alpha-\mathbf{1}\{r\lt q\}\big)\,(r-q)$$</p>
+<p class="fnote">$r$ is the realized return, $q$ the forecast quantile, $\alpha$ the tail level. Check both branches:
+if $r\ge q$ (no breach) the loss is $\alpha(r-q)\ge0$, so being needlessly conservative costs you; if $r\lt q$
+(breach) the loss is $(\alpha-1)(r-q)=(1-\alpha)(q-r)\gt0$, so being breached costs you nineteen times more per
+unit at $\alpha=0.05$. The loss is always non-negative and is minimised, in expectation, by the true $\alpha$
+quantile &mdash; which is what makes it a fair way to rank quantile forecasts. Also called the check loss or
+quantile loss.</p></div>
+
+<h3>Christoffersen's two coverage tests</h3>
+
+<div class="box def"><span class="k">The formula</span>
+<p>Unconditional coverage &mdash; "is the breach <em>rate</em> right?"</p>
+<p>$$LR_{uc}=-2\Big[x\ln\alpha+(n-x)\ln(1-\alpha)-x\ln\hat\pi-(n-x)\ln(1-\hat\pi)\Big]\ \sim\ \chi^2_1$$</p>
+<p>Independence &mdash; "do breaches cluster?" &mdash; and the two combined:</p>
+<p>$$LR_{cc}=LR_{uc}+LR_{ind}\ \sim\ \chi^2_2$$</p>
+<p class="fnote">$n$ is the number of forecast days in the group (153 here); $x$ is the number of breaches;
+$\hat\pi=x/n$ is the observed breach rate; $\alpha$ is the promised rate. $LR$ stands for likelihood ratio: it
+compares how well the promised rate explains the data against how well the best-fitting rate does. $\chi^2_1$ and
+$\chi^2_2$ are chi-squared distributions with one and two degrees of freedom. $LR_{ind}$ compares a model where the
+breach probability depends on whether yesterday was a breach against one where it does not; a large value means
+breaches arrive in bursts, which is worse for a risk manager than the same number spread out.
+A <em>large</em> statistic and a <em>small</em> p-value mean the model is rejected.</p></div>
+
+<h3>Clopper-Pearson interval &mdash; the honesty column</h3>
+
+<div class="box def"><span class="k">The formula</span>
+<p>$$p_{\text{lo}}=B^{-1}\!\left(\tfrac{1-c}{2};\,x,\,n-x+1\right),
+\qquad
+p_{\text{hi}}=B^{-1}\!\left(1-\tfrac{1-c}{2};\,x+1,\,n-x\right)$$</p>
+<p class="fnote">$B^{-1}(\cdot;a,b)$ is the inverse distribution function of the Beta distribution with shape
+parameters $a$ and $b$; $c=0.95$ is the confidence level; $x$ breaches out of $n$ days. When $x=0$ the lower bound
+is set to exactly 0, and when $x=n$ the upper bound to exactly 1, because the Beta form is undefined there. This
+is the <em>exact</em> binomial interval &mdash; it never relies on a normal approximation, which matters a great
+deal when $x$ is 0 or 1.</p></div>
+
+<div class="box data"><span class="k">Sample data &mdash; SPY at the 5 percent level, full period</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; 153 forecast rows per model from backtest_results.parquet</span>
+<pre>period = "full" (2019-01-01 to 2023-12-31, which in practice means
+                 the 153 days of 2023 that survived the training window)</pre></div>
+<div><span class="lab">out &mdash; summary_metrics.parquet, SPY, alpha = 0.05</span>
+<pre>model                obs  viol   rate   ci_lo   ci_hi  pinball  avg_VaR  uc_p   cc_p   ES verdict
+conformal            153     5  0.0327  0.0107  0.0746  0.000983  0.01668  0.295  0.505  not_reported
+filtered_historical  153     7  0.0458  0.0186  0.0920  0.000918  0.01399  0.807  0.727  do_not_reject
+garch_normal         153     3  0.0196  0.0041  0.0562  0.000935  0.01496  0.050  0.139  do_not_reject
+garch_student_t      153     3  0.0196  0.0041  0.0562  0.000934  0.01495  0.050  0.139  do_not_reject
+historical           153     7  0.0458  0.0186  0.0920  0.000944  0.01436  0.807  0.727  do_not_reject
+                                  ^                ^
+              every 95% interval contains 0.05  &lt;- with 153 days you cannot
+              separate a 2% model from a 7.5% model. That is the finding.</pre></div>
+</div>
+<p><b>Two hand-checks.</b> (1) The portfolio's conformal model at $\alpha=0.01$ recorded 0 breaches in 153 days,
+and its reported upper bound is 0.023822. With $x=0$ the Beta form collapses to a closed expression,
+$p_{\text{hi}}=1-0.025^{1/153}=0.0238220$ &mdash; the same number. (2) Its reported unconditional-coverage
+p-value is 0.079485. With $x=0$ the statistic collapses to
+$LR_{uc}=-2n\ln(1-\alpha)=-2\times153\times\ln(0.99)=3.0754$, and $P(\chi^2_1\gt3.0754)=0.0794849$ &mdash; again
+the same number. Both formulas on this page are therefore the formulas the code actually implements.</p></div>
+
+<div class="box data"><span class="k">Sample data &mdash; all five series averaged, the headline comparison</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; the 50-row summary file, period "full"</span>
+<pre>grouped by model and alpha, averaged over the five series
+(each series contributes exactly 153 observations, so the
+ mean of the rates equals the pooled rate)</pre></div>
+<div><span class="lab">out &mdash; mean violation rate and pinball loss</span>
+<pre>model                alpha  violation_rate  pinball_loss  avg_predicted_var
+conformal             0.01        0.000000      0.000384           0.037397
+filtered_historical   0.01        0.005229      0.000346           0.033388
+garch_normal          0.01        0.007843      0.000349           0.032669
+garch_student_t       0.01        0.007843      0.000350           0.033339
+historical            0.01        0.006536      0.000324           0.030129
+
+conformal             0.05        0.028758      0.001409           0.024765
+filtered_historical   0.05        0.035294      0.001321           0.022633
+garch_normal          0.05        0.031373      0.001324           0.022870
+garch_student_t       0.05        0.031373      0.001323           0.022860
+historical            0.05        0.054902      0.001324           0.021088
+                                       ^              ^
+        conformal breaches least often, and also has the WORST pinball
+        loss and the LARGEST average VaR at both levels  &lt;- it is buying
+        safety with capital, not with better forecasts</pre></div>
+</div>
+<p>That trade-off is the most interesting honest result in the project and it is worth stating plainly: over these
+153 days the adaptive conformal model was the most conservative and the least accurate. At $\alpha=0.05$ it
+demanded <b>17.4 percent</b> more capital than historical simulation (0.024765 against 0.021088) to cut the breach
+rate from 5.5 percent to 2.9 percent, and its pinball loss was 6.7 percent worse than the best model's. At
+$\alpha=0.01$ the capital gap widens to 24.1 percent (0.037397 against 0.030129) for zero breaches against one.
+Whether that is a good trade depends on the cost of capital, and 153 days is far too short to settle it.</p></div>
+
+<div class="box def"><span class="k">The formula &mdash; the two Expected Shortfall tests</span>
+<p>$$Z_1=\frac{1}{N_T}\sum_{t\in T}\frac{r_t}{\mathrm{ES}_t}+1
+\qquad\qquad
+Z_2=\frac{1}{n}\sum_{t=1}^{n}\frac{r_t\,\mathbf{1}\{r_t\lt q_t\}}{\alpha\,\mathrm{ES}_t}+1$$</p>
+<p class="fnote">These are the Acerbi-Sz&eacute;kely statistics. $T$ is the set of breach days and $N_T$ its size;
+$r_t$ is the realized return on a breach day, which is negative; $\mathrm{ES}_t$ is the predicted Expected
+Shortfall, a positive loss amount. If predictions are right, the ratio $r_t/\mathrm{ES}_t$ averages $-1$ and each
+statistic averages 0. A clearly <em>negative</em> statistic means realized losses were worse than predicted, so ES
+was understated. $Z_1$ conditions on breaches only and says nothing about whether the breach count was right;
+$Z_2$ divides by $n$ and by $\alpha$ instead, so it punishes both too many breaches and too-severe breaches. The
+code turns each into a one-sided p-value with a $\sqrt{N}\bar x/s$ statistic read against a normal distribution,
+and labels the outcome from $Z_2$.</p></div>
+
+<div class="box why"><span class="k">Why the conformal ES verdict is refused rather than reported</span>
+<p><code>classify_es_backtest()</code> returns <code>"not_reported"</code> for the conformal model before it looks at
+any number. The reason is the point mass at zero described in section 09: the pseudo-return sample the conformal ES
+is averaged over is partly synthetic, so a pass or a fail would not mean what a reader would take it to mean.
+Declining to score is more honest than scoring something that does not deserve it. The same function returns
+<code>"insufficient_tail_data"</code> when there were too few breaches to compute anything, rather than printing a
+NaN and letting a reader guess.</p></div>
+
+<div class="box warn"><span class="k">Trap: the confidence level for the violation-rate interval is fixed in code</span>
+<p><code>_summarize_period()</code> calls <code>clopper_pearson_interval(..., confidence_level=0.95)</code> as a
+literal, while the ES label threshold comes from <code>config.toml</code> as
+<code>es_backtest_confidence</code>. The literal is deliberate to the extent that the output column names encode it
+(<code>violation_rate_ci_95_lower</code>, <code>violation_rate_ci_95_upper</code>) &mdash; making it configurable
+would require the column names to change with it. Worth knowing before someone edits the config expecting the
+interval to move.</p></div>
+
+<h2 id="s12"><span class="sec-no">12</span>Orchestration &mdash; <code>run_pipeline()</code> and the command line</h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>One function calls the other nine in order and saves five files. The script wrapping it does nothing but read
+one command-line flag.</p></div>
+
+<pre>    resolved_config_path = config_path.resolve()
+    config = load_config(resolved_config_path)
+    project_root = resolved_config_path.parent
+
+    <span class="c"># All derived artifacts land under the configured output folder.</span>
+    output_dir = project_root / config.run.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)</pre>
+
+<div class="box why"><span class="k">Why the project root is derived from the config file's location</span>
+<p>Every relative path in <code>config.toml</code> &mdash; <code>data/raw</code>, <code>outputs/runs</code> &mdash; is
+resolved against the folder holding the config file, not against the shell's current directory. So
+<code>uv run python scripts/run_pipeline.py</code> works identically from the repository root, from
+<code>scripts/</code>, or from anywhere else. The command-line default follows the same idea:
+<code>Path(__file__).resolve().parent.parent / "config.toml"</code>. This is also what lets the end-to-end test
+point at a config file inside a temporary folder and have the whole pipeline read and write inside that folder.</p></div>
+
+<div class="box def"><span class="k">What it returns</span>
+<p>A frozen <code>PipelineArtifacts</code> dataclass holding the five output paths, which the command-line script
+prints as <code>key=path</code> lines. That makes the script's output easy to consume from a shell script without
+parsing prose.</p></div>
+
+<div class="box data"><span class="k">Sample data &mdash; what a run leaves behind</span>
+<div class="io stack">
+<div><span class="lab">in &mdash; one command</span>
+<pre>uv run python scripts/run_pipeline.py --config config.toml</pre></div>
+<div><span class="lab">out &mdash; outputs/runs/</span>
+<pre>daily_returns.parquet           (1303, 5)
+daily_realized_variance.parquet (1304, 5)
+feature_table.parquet           (6405, 9)
+backtest_results.parquet        (7650, 11)
+summary_metrics.parquet         (50, 24)</pre></div>
+</div>
+<p>The whole run was timed at <b>1 minute 51 seconds</b> wall clock (1 minute 10 seconds of processor time), almost
+all of it inside <code>arch_model(...).fit()</code>.</p></div>
+
+<h2 id="s13"><span class="sec-no">13</span>The blog charts &mdash; <code>blog/generate_charts.py</code></h2>
+
+<div class="box gist"><span class="k">In plain words</span>
+<p>A separate small script that draws three figures for the write-up. By default it reads two small committed CSV
+files so the figures can be redrawn in seconds; pass <code>--refresh-data</code> to rebuild those CSVs from a fresh
+pipeline run first.</p></div>
+
+<div class="box def"><span class="k">What it does</span>
+<p><b>Input:</b> <code>blog/data/model_summary.csv</code> and <code>blog/data/spy_conformal_5pct_path.csv</code>,
+or the parquet files under <code>outputs/runs/</code> with <code>--refresh-data</code>.
+<b>Output:</b> three PNG files under <code>blog/images/</code> at 220 dots per inch.
+<b>Role:</b> the only consumer of the pipeline results outside the notebook. It is not part of the pipeline and
+nothing depends on it.</p></div>
+
+<div class="box why"><span class="k">Why frozen CSVs instead of reading the parquet directly</span>
+<p>The parquet outputs are git-ignored, so a fresh clone has none. Freezing two small CSVs (a 10-row summary and a
+153-row SPY path) means the blog figures are reproducible from the repository alone, without a pipeline run.
+The trade is that the CSVs can drift out of date if someone changes the pipeline and forgets
+<code>--refresh-data</code>. Nothing in the repository detects that drift.</p></div>
+
+<h2 id="calls"><span class="sec-no">14</span>Call graph</h2>
+
+<pre>scripts/run_pipeline.py :: main()
+└── pipeline/run.py :: run_pipeline(config_path)
+    ├── config.py :: load_config()                          -&gt; ProjectConfig
+    ├── data/raw_cache.py :: load_raw_minute_bars()         -&gt; (2034240, 3)
+    ├── data/daily_panel.py :: build_daily_log_return_panel()
+    │   ├── _filter_regular_session()                        <span class="c"># when regular_session_only</span>
+    │   ├── _assign_new_york_trading_date()
+    │   └── _append_portfolio_column()                      -&gt; (1303, 5)
+    ├── data/realized_variance.py :: build_daily_realized_variance_panel()
+    │   ├── _filter_regular_session()                        <span class="c"># imported from daily_panel</span>
+    │   └── _assign_new_york_trading_date()                 -&gt; (1304, 5)
+    ├── features/feature_builder.py :: build_feature_table() -&gt; (6405, 9)  <span class="c"># written, never read</span>
+    ├── models/registry.py :: build_model_factories()       -&gt; 5 factories
+    ├── evaluation/backtest.py :: run_backtest()            -&gt; (7650, 11)
+    │   └── for each asset x model x alpha x date:
+    │       ├── model.fit(training_returns)
+    │       │   └── historical : slice last 250
+    │       │       garch_*    : arch_model(...).fit()       <span class="c"># the slow one</span>
+    │       │       fhs        : arch_model(...).fit() + rng.choice(10000)
+    │       │       conformal  : _compute_rolling_mean() -&gt; scores
+    │       ├── model.predict_lower_quantile(alpha)
+    │       │   └── conformal  : _finite_sample_upper_quantile()
+    │       ├── model.predict_interval(alpha)
+    │       ├── model.predict_es(alpha)
+    │       └── model.observe(realized_return)               <span class="c"># conformal only</span>
+    └── evaluation/metrics.py :: compute_summary_metrics()  -&gt; (50, 24)
+        ├── _slice_configured_periods()                      <span class="c"># 4 configured, 1 non-empty</span>
+        └── _summarize_period()
+            ├── quantile_loss()
+            ├── christoffersen_unconditional_coverage()
+            ├── christoffersen_conditional_coverage()
+            │   └── christoffersen_unconditional_coverage()  <span class="c"># reused for LR_uc</span>
+            ├── clopper_pearson_interval()
+            ├── acerbi_szekely_z1_statistic() / _p_value()
+            ├── acerbi_szekely_z2_statistic() / _p_value()
+            │   └── one_sided_mean_zero_p_value()
+            ├── realized_tail_loss_mean()
+            └── classify_es_backtest()</pre>
+
+<h2 id="config-ref"><span class="sec-no">15</span>Every setting and what changing it does</h2>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Setting</th><th class="n">Value</th><th>What happens if you change it</th></tr></thead>
+<tbody>
+<tr><td><code>run.start_date</code> / <code>end_date</code></td><td class="n">2019-01-01 / 2023-12-31</td><td>Cuts the raw rows. Narrowing them shortens the return panel, which with a fixed 1,150-day window can wipe out the evaluation sample entirely.</td></tr>
+<tr><td><code>run.output_dir</code></td><td class="n">outputs/runs</td><td>Where the five parquet files land, resolved relative to the config file's folder.</td></tr>
+<tr><td><code>run.seed</code></td><td class="n">11</td><td>Only reaches the filtered-historical bootstrap, via <code>seed + int(alpha*100000) + 17</code>. Nothing else in the pipeline is random.</td></tr>
+<tr><td><code>raw_data.raw_dir</code> / <code>file_pattern</code></td><td class="n">data/raw / *.parquet</td><td>Where to look and what to match. All matching files are concatenated.</td></tr>
+<tr><td><code>raw_data.timezone</code></td><td class="n">"UTC"</td><td><b>Read but never used.</b> The loader checks only that timestamps carry <em>some</em> timezone, not that it is UTC. Documentation of an assumption, not an enforced setting.</td></tr>
+<tr><td><code>raw_data.regular_session_only</code></td><td class="n">true</td><td>Set false to keep pre-market and after-hours bars, which changes both the daily close and the realized-variance sum. Was ignored before the fix in section 18.</td></tr>
+<tr><td><code>portfolio.symbols</code></td><td class="n">AAPL, JPM, TSLA, SPY</td><td>Which columns exist and what the equal-weight portfolio averages. Every listed symbol must exist in the raw file or loading fails.</td></tr>
+<tr><td><code>backtest.calibration_window</code></td><td class="n">1150</td><td>The single most consequential number. Evaluation days = 1303 &minus; this. Lowering it to 750 would give 553 evaluation days and make the covid and rate-shock periods non-empty; raising it shrinks the test set toward zero.</td></tr>
+<tr><td><code>backtest.alphas</code></td><td class="n">[0.05, 0.01]</td><td>One independent model instance per value. Runtime scales roughly linearly with the count.</td></tr>
+<tr><td><code>evaluation.es_backtest_confidence</code></td><td class="n">0.95</td><td>The ES verdict rejects when the $Z_2$ p-value falls below $1-$ this. Does <em>not</em> affect the violation-rate interval, which is fixed at 95 percent in code.</td></tr>
+<tr><td><code>evaluation.periods</code></td><td class="n">4 named ranges</td><td>Empty periods are dropped silently. Three of the four are currently empty because of the window length.</td></tr>
+<tr><td><code>features.include_realized_return_volatility_5d</code></td><td class="n">true</td><td>Adds or removes one column from a table that no model reads. Purely cosmetic today.</td></tr>
+<tr><td><code>historical.window</code></td><td class="n">250</td><td>How many trailing days the empirical quantile is read from. Must be at most <code>calibration_window</code> or the slice is short.</td></tr>
+<tr><td><code>garch.p</code> / <code>garch.q</code></td><td class="n">1 / 1</td><td>The GARCH lag orders, shared by both GARCH models and by the filtered-historical model's volatility layer.</td></tr>
+<tr><td><code>filtered_historical.simulations</code></td><td class="n">10000</td><td>Bootstrap draws per forecast. Lower values add sampling noise to the quantile; higher values cost time and buy little.</td></tr>
+<tr><td><code>conformal.window</code></td><td class="n">500</td><td>Calibration scores = this minus <code>mean_window</code>, so 480. A larger window smooths the tail estimate but reacts more slowly to a regime change.</td></tr>
+<tr><td><code>conformal.mean_window</code></td><td class="n">20</td><td>Days averaged for the point forecast. Must be strictly less than <code>window</code> or <code>fit()</code> raises.</td></tr>
+<tr><td><code>conformal.learning_rate</code></td><td class="n">0.005</td><td>How hard a breach moves the internal tail level. Larger values chase recent breaches; smaller values behave almost like a static conformal model.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="edge"><span class="sec-no">16</span>Edge cases</h2>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Situation</th><th>What would go wrong</th><th>What handles it</th></tr></thead>
+<tbody>
+<tr><td>A stock did not trade on a given day</td><td>The portfolio column would report the average of whichever stocks did trade, silently changing its own composition</td><td><code>_append_portfolio_column</code> masks the row with <code>.where(complete_rows)</code></td></tr>
+<tr><td>Realized variance has one more row than returns</td><td>Features would misalign by a day</td><td><code>run_pipeline</code> reindexes; <code>build_feature_table</code> raises if the indexes still differ</td></tr>
+<tr><td>A GARCH optimisation fails to converge</td><td>Yesterday's parameters would be reused, hiding the failure and leaking a stale window</td><td><code>_last_result = None</code> is set before the <code>try</code>; the fallback is the current window's mean and standard deviation</td></tr>
+<tr><td>The conformal rank exceeds the score count</td><td><code>IndexError</code></td><td><code>np.clip(rank, 1, sample_size)</code>; the model saturates at its largest observed score</td></tr>
+<tr><td>The internal tail level drifts to 0 or 1</td><td>Division by zero or an impossible rank</td><td>Clipped to <code>[0.001, 0.999]</code> on every update</td></tr>
+<tr><td>Zero breaches in a period</td><td>$\log 0$ in the coverage test; an undefined Beta interval</td><td>Rate clipped to $[10^{-12}, 1-10^{-12}]$; the Clopper-Pearson lower bound is set to exactly 0</td></tr>
+<tr><td>Predicted Expected Shortfall is exactly zero on some day</td><td>Division by zero would put infinities into the ES statistics</td><td><code>(group["predicted_es"] &lt;= 0.0).any()</code> short-circuits the whole group to NaN, and the label becomes <code>insufficient_tail_data</code></td></tr>
+<tr><td>Fewer than two breaches</td><td>A sample standard deviation of one point is undefined</td><td><code>one_sided_mean_zero_p_value</code> returns NaN when the sample has fewer than two elements</td></tr>
+<tr><td>A configured evaluation period contains no rows</td><td>An empty group would produce meaningless statistics</td><td>Empty period frames are skipped in <code>compute_summary_metrics</code></td></tr>
+<tr><td>All configured periods are empty</td><td><span class="failw">Not handled.</span> <code>pd.concat([])</code> raises <code>ValueError: No objects to concatenate</code> after the full 20-minute backtest has already run</td><td>Nothing. Left as-is because choosing what an empty summary should look like is a design decision, not a bug fix</td></tr>
+<tr><td>A return series has a calendar gap</td><td><span class="failw">Not handled.</span> <code>dropna()</code> then positional slicing means "tomorrow" becomes "the next available day"</td><td>Nothing. Harmless on this complete panel, would bite on halted or newly listed names</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="traps"><span class="sec-no">17</span>Traps and idioms</h2>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Idiom</th><th>What it does</th><th>The trap</th></tr></thead>
+<tbody>
+<tr><td><code>series.iloc[i - w : i]</code></td><td>Takes the $w$ elements ending at position $i-1$</td><td>The end of a Python slice is exclusive. Writing <code>i + 1</code> here would put the day being predicted inside its own training window &mdash; the classic look-ahead bug</td></tr>
+<tr><td><code>.mean(axis=1)</code></td><td>Averages across columns</td><td>Skips missing values by default, so a partially missing row quietly averages fewer things. Always pair with an explicit completeness mask</td></tr>
+<tr><td><code>.sum(min_count=1)</code></td><td>Sums a group</td><td>Without <code>min_count=1</code>, a group of all-missing values sums to 0, which for a variance means "a perfectly still day" rather than "no data"</td></tr>
+<tr><td><code>.shift(-1)</code></td><td>Pulls the next row's value onto this row</td><td>A negative shift moves data <em>backwards in time</em>. Correct for a target; catastrophic for a feature</td></tr>
+<tr><td><code>rv.shift(1).rolling(5).mean()</code></td><td>Average of days $t-5$ through $t-1$</td><td>Shift first, then roll. Rolling first and shifting after gives a different window; forgetting the shift includes today</td></tr>
+<tr><td><code>np.partition(a, k)[k]</code></td><td>The $k$-th smallest element, in linear time</td><td>The array is only partially sorted &mdash; do not read any other position from the result expecting sorted order</td></tr>
+<tr><td><code>np.clip(x, lo, hi)</code></td><td>Bounds a value</td><td>It silences the out-of-range case rather than reporting it. In <code>_finite_sample_upper_quantile</code> this converts an impossible rank into a saturated forecast with no warning</td></tr>
+<tr><td><code>@dataclass(frozen=True)</code></td><td>Makes assignment to a field raise</td><td>Only shallow. The <code>list</code> inside <code>PortfolioConfig.symbols</code> can still be mutated in place</td></tr>
+<tr><td><code>del argument</code> in a method body</td><td>Marks a parameter as deliberately unused</td><td>Cosmetic only. It satisfies linters and signals intent; it does not stop a caller passing something</td></tr>
+<tr><td><code>except Exception: logging.warning(...)</code></td><td>Keeps a rolling loop alive through one bad fit</td><td>Swallows genuine bugs too. With no logging handler configured, the warnings are easy to lose in a long run</td></tr>
+<tr><td><code>lambda alpha: Model(...)</code> in a dict</td><td>A factory, so each caller gets a fresh object</td><td>If the value were a shared <em>instance</em> instead, adaptive state would leak across assets and tail levels</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="point"><span class="sec-no">18</span>If someone points at a line</h2>
+
+<div class="scroll">
+<table>
+<thead><tr><th>The question</th><th>The answer</th></tr></thead>
+<tbody>
+<tr><td>"Where exactly do you prevent look-ahead?"</td><td>Three places. <code>backtest.py</code>: the training slice ends at position $i-1$ and the realized return is read at position $i$. <code>backtest.py</code>: <code>observe()</code> is called after the row is written, so adaptive state never contains its own outcome. <code>feature_builder.py</code>: the target is <code>shift(-1)</code> and every feature is either same-day-close or shifted back further.</td></tr>
+<tr><td>"Why is VaR positive but the quantile negative?"</td><td>The quantile is a return, the VaR is a loss amount: $\mathrm{VaR}=\max(-q,0)$. Both are stored. All scoring uses the quantile, never the floored loss, so a rare positive quantile cannot make every down day look like a breach.</td></tr>
+<tr><td>"Your conformal model breaches least often. Is it the best?"</td><td>No, and the numbers say so. At $\alpha=0.05$ it has the highest pinball loss (0.001409 against 0.001321 for filtered historical) and the largest average VaR (0.024765 against 0.021088 for historical simulation). It is buying a lower breach rate with more capital, not with better forecasts.</td></tr>
+<tr><td>"Do you claim the conformal coverage guarantee?"</td><td>No. The guarantee needs exchangeable scores; daily equity returns cluster in volatility and are not exchangeable. The docstring in <code>conformal.py</code> says this. Conformal theory supplies the construction; the walk-forward backtest supplies the evidence.</td></tr>
+<tr><td>"Why is realized variance built at all?"</td><td>Honestly: it feeds a feature table that no model currently reads. It is correctly built and correctly timed, and it is unconsumed. The obvious next step for the project is a model that actually uses it.</td></tr>
+<tr><td>"Why average intraday returns before squaring for the portfolio?"</td><td>Because $\mathrm{Var}(\frac1N\sum r_i)=\frac1{N^2}\sum_k\sum_l \mathrm{Cov}(r_k,r_l)$ contains cross terms. Averaging the four variances drops every covariance and uses $1/N$ where $1/N^2$ belongs. On 16 March 2020 the difference is 6.75e-06 against 2.43e-05, a factor of 3.6.</td></tr>
+<tr><td>"Why multiply returns by 100 before the GARCH fit?"</td><td>Numerical conditioning. The variance intercept would otherwise be around $10^{-6}$ and the optimiser struggles. Both forecast methods divide back by 100 afterwards; the sample box in section 08 confirms the round trip.</td></tr>
+<tr><td>"What if a GARCH fit fails?"</td><td>The previous result is cleared first, so the fallback is the current window's mean and standard deviation, never yesterday's fitted parameters. There is a test that monkeypatches <code>arch_model</code> to throw and asserts this.</td></tr>
+<tr><td>"How long does it take, and why?"</td><td>1 minute 51 seconds, measured. Three of the five models refit a GARCH model on every one of $153\times5\times2$ steps, which is about 4,590 numerical optimisations at roughly 24 milliseconds each. Refitting is the point of a walk-forward test, so this is a cost rather than a waste.</td></tr>
+<tr><td>"Why do three of your four evaluation periods print nothing?"</td><td>The 1,150-day training window consumes everything before 31 May 2023, so all 153 evaluation days sit in 2023. The covid, rate-shock and post-covid windows all end before that. Lowering <code>calibration_window</code> is what would bring them back.</td></tr>
+<tr><td>"Can I trust a 3.3 percent breach rate against a 5 percent target?"</td><td>Not on its own. The exact 95 percent interval for 5 breaches in 153 days runs from 1.07 percent to 7.46 percent, which contains 5 percent comfortably. The interval column exists precisely so this question has a number attached to it.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="limits"><span class="sec-no">19</span>Honest limitations</h2>
+
+<div class="box flag"><span class="k">Stated before anyone asks</span>
+<ol>
+<li><b>153 evaluation days is not enough to rank five models.</b> Every 95 percent interval in the summary table
+contains the target rate. The project reports those intervals rather than declaring a winner, which is the right
+call, but it means no model is shown to be better than another here.</li>
+<li><b>The realized-variance work does not reach any forecast.</b> Two of the six modules exist to build a feature
+table nothing reads.</li>
+<li><b>The conformal coverage guarantee does not apply.</b> Financial returns are not exchangeable. The code uses
+the exchangeable-case rank and says so; the adaptive update exists because the static guarantee cannot be leaned on.</li>
+<li><b>The conformal Expected Shortfall is partly synthetic</b> because roughly half the one-sided scores are zero.
+The code refuses to publish an ES verdict for it, which is honest, but it also means the model is only half-evaluated.</li>
+<li><b>The tracked dataset appears to be synthetic or reconstructed.</b> It contains a bar for 1 January 2019, which
+was a market holiday, and exactly 390 bars for every symbol on every one of 1,304 days &mdash; real minute data has
+gaps, halts and short days. The pipeline is real; treat the specific numbers as a demonstration of the machinery,
+not as a claim about the 2023 equity market.</li>
+<li><b>The portfolio return averages log returns</b> rather than compounding properly. The error is second order
+and small at daily frequency, but it is an approximation, and notably the realized-variance module does not take
+the same shortcut.</li>
+<li><b>Bootstrap randomness is synchronised across the five series</b> because the filtered-historical seed depends
+on the tail level but not on the asset. Immaterial at 10,000 draws; relevant if anyone treats the five series as
+independent trials.</li>
+<li><b>No logging is configured.</b> A GARCH fit that fails on many days would degrade the model to a rolling
+standard deviation, and the only trace would be warnings on standard error amid the pipeline's normal output.</li>
+</ol></div>
+
+<h2 id="fixes"><span class="sec-no">20</span>Fixes applied</h2>
+
+<p>Two genuine defects were found while reading and both were fixed. Neither changes any number in the results
+above; the second changes behaviour only for a configuration that previously did nothing.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>What</th><th>File</th><th>The defect</th><th>The fix</th></tr></thead>
+<tbody>
+<tr>
+<td><span class="chip c-bug">comment</span></td>
+<td><code>src/conformal_var_risk/models/conformal.py</code></td>
+<td>The inline comment on <code>observe()</code> read <i>"Raise alpha after a breach (coverage too low); lower it
+after a quiet day"</i> &mdash; the exact opposite of what the code does, and the opposite of what
+<code>GUIDE_src.md</code> states. A breach makes the bracket $(\alpha-1)$, which is negative, so $a_t$
+<em>falls</em>. Anyone trusting the comment would conclude the adaptation ran backwards.</td>
+<td>Replaced with a comment that matches the code and explains the consequence: a lower $a_t$ selects a higher score
+rank and therefore a more conservative boundary.</td>
+</tr>
+<tr>
+<td><span class="chip c-drop">dead setting</span></td>
+<td><code>data/daily_panel.py</code>, <code>data/realized_variance.py</code>, <code>pipeline/run.py</code>, <code>docs/reference/raw-cache-contract.md</code></td>
+<td><code>raw_data.regular_session_only</code> was declared in <code>config.toml</code>, parsed into
+<code>RawDataConfig</code>, and then read by nothing. <code>_filter_regular_session()</code> was called
+unconditionally. Setting the flag to <code>false</code> silently had no effect &mdash; a user would believe they had
+included after-hours bars when they had not.</td>
+<td>Both panel builders now take a <code>regular_session_only: bool = True</code> parameter and skip the filter when
+it is false; <code>run_pipeline</code> passes <code>config.raw_data.regular_session_only</code> through. The
+reference document's "always applies" sentence was corrected to match.</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="box data"><span class="k">Proof the second fix does something</span>
+<div class="io">
+<div><span class="lab">in &mdash; one synthetic symbol, four bars per day</span>
+<pre>New York times : 08:00, 09:30, 10:00, 16:30
+closes day 1   : 100.0, 101.0, 102.0, 150.0
+closes day 2   : 100.0, 101.0, 103.0, 160.0</pre></div>
+<div><span class="lab">out &mdash; the resulting daily log return</span>
+<pre>regular_session_only=True : 0.009756
+    (close = the 10:00 bar: ln(103/102))
+regular_session_only=False: 0.064539
+    (close = the 16:30 bar: ln(160/150))
+                              &lt;- before the fix, both said 0.009756</pre></div>
+</div>
+<p>On the tracked dataset the flag changes nothing, because the file contains no bars outside 09:30 to 15:59. All
+figures elsewhere on this page are therefore unaffected.</p></div>
+
+<h4>Things deliberately left alone</h4>
+<ul>
+<li><b><code>confidence_level=0.95</code> written as a literal in <code>metrics.py</code>.</b> The output column names
+encode 95, so making it configurable would require the schema to change with it. Documented in section 11 instead.</li>
+<li><b><code>pd.concat([])</code> raising when every evaluation period is empty.</b> Real, but fixing it means
+deciding what an empty summary should look like, which is a design call rather than a defect. Listed in the edge-case
+table.</li>
+<li><b><code>raw_data.timezone</code> being read but never enforced.</b> The loader checks only for the presence of a
+timezone. Documented in the settings table rather than changed, since enforcing UTC would reject otherwise valid
+input for no benefit.</li>
+<li><b>Formatting-only changes already sitting uncommitted in the working tree</b> (import ordering, line wrapping in
+<code>metrics.py</code>, <code>garch.py</code>, <code>fhs.py</code>, <code>registry.py</code>, <code>config.py</code>,
+the notebook and the tests). Not mine, not touched, not committed.</li>
+</ul>
+
+<h2 id="verify"><span class="sec-no">21</span>How this page was verified</h2>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Check</th><th>How</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>The code runs</td><td><code>uv sync --reinstall</code> then <code>uv run python -m pytest</code></td><td><span class="pass">24 passed</span>. The environment was broken on arrival &mdash; a stale numpy under Python 3.14 &mdash; and needed reinstalling before anything would import.</td></tr>
+<tr><td>Every sample number is real</td><td>A scratch script imported the package and printed each stage's frames against <code>data/raw/minute_bars.parquet</code>; the stored parquet outputs supplied the backtest and summary rows</td><td><span class="pass">No number on this page was typed from memory or estimated.</span></td></tr>
+<tr><td>The pipeline reproduces end to end</td><td><code>uv run python scripts/run_pipeline.py --config config.toml</code> after the fixes</td><td><span class="pass">Completed in 1m51s; five artifacts written</span> at (1303, 5), (1304, 5), (6405, 9), (7650, 11), (50, 24), and every summary figure quoted on this page reproduced to the last decimal.</td></tr>
+<tr><td>Two reported statistics recomputed by hand</td><td>Clopper-Pearson upper bound for 0 of 153, and the unconditional-coverage p-value for the same group</td><td><span class="pass">0.0238220 and 0.0794849</span>, matching the reported 0.023822 and 0.079485 exactly.</td></tr>
+<tr><td>The session flag now has an effect</td><td>A four-bar synthetic day run through the panel builder with the flag both ways</td><td><span class="pass">0.009756 against 0.064539</span> &mdash; see section 20.</td></tr>
+<tr><td>This file is well-formed</td><td>Parsed with Python's <code>html.parser</code>, tracking open and close tags</td><td><span class="pass">No unclosed tags.</span></td></tr>
+<tr><td>The maths is safe</td><td>Every <code>$...$</code> and <code>$$...$$</code> region checked for balanced braces and for raw <code>&lt;</code> or <code>&gt;</code>; comparisons written as <code>\lt</code> and <code>\le</code></td><td><span class="pass">Balanced, no raw angle brackets inside maths.</span></td></tr>
+<tr><td>The diagram renders</td><td>Every Mermaid label containing brackets, dashes or commas is quoted</td><td><span class="pass">All ten node labels quoted.</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="foot">Companion documents in this repository: <code>README.md</code> for the project story and run
+commands, <code>GUIDE_ROOT.md</code> and <code>GUIDE_OVERVIEW.md</code> for the architecture map,
+<code>src/GUIDE_src.md</code> for the package contract, <code>docs/reference/</code> for the raw-data contract and
+the offline workflow, and <code>notebooks/demo.ipynb</code> for the same flow run stage by stage.</p>
+
+</div>
+</body>
+</html>
