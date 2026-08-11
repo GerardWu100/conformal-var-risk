@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
-
 from conformal_var_risk.config import EvaluationConfig, EvaluationPeriodConfig
 from conformal_var_risk.evaluation.metrics import (
     clopper_pearson_interval,

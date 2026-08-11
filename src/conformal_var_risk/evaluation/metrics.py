@@ -100,12 +100,10 @@ def _summarize_period(
         es_z1_p_value = acerbi_szekely_z1_p_value(group=group)
         es_z2_p_value = acerbi_szekely_z2_p_value(group=group, alpha=float(alpha))
         violation_count = int(violation_series.sum())
-        violation_rate_ci_lower, violation_rate_ci_upper = (
-            clopper_pearson_interval(
-                successes=violation_count,
-                trials=len(violation_series),
-                confidence_level=0.95,
-            )
+        violation_rate_ci_lower, violation_rate_ci_upper = clopper_pearson_interval(
+            successes=violation_count,
+            trials=len(violation_series),
+            confidence_level=0.95,
         )
         rows.append(
             {
@@ -113,7 +111,7 @@ def _summarize_period(
                 "asset": asset_name,
                 "model": model_name,
                 "alpha": float(alpha),
-                "observations": int(len(group)),
+                "observations": len(group),
                 "violations": violation_count,
                 "violation_rate": float(violation_series.mean()),
                 "violation_rate_ci_95_lower": violation_rate_ci_lower,
@@ -218,7 +216,7 @@ def christoffersen_unconditional_coverage(
     alpha: float,
 ) -> tuple[float, float]:
     """Compute Christoffersen's unconditional-coverage test."""
-    sample_size = int(len(violations))
+    sample_size = len(violations)
     if sample_size == 0:
         return np.nan, np.nan
 

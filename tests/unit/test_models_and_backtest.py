@@ -5,7 +5,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-
 from conformal_var_risk.evaluation.backtest import run_backtest
 from conformal_var_risk.models import garch as garch_module
 from conformal_var_risk.models.base import VaRModel

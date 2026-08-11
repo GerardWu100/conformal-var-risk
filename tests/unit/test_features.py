@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
 from conformal_var_risk.features.feature_builder import build_feature_table
 
 

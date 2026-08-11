@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import logging
 
-from arch import arch_model
 import numpy as np
+from arch import arch_model
 
 from conformal_var_risk.models.base import VaRModel
 

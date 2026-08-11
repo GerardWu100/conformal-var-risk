@@ -58,8 +58,14 @@ def refresh_frozen_data() -> None:
             avg_quantile_loss=("avg_quantile_loss", "mean"),
             avg_predicted_var=("avg_predicted_var", "mean"),
             avg_predicted_es=("avg_predicted_es", "mean"),
-            assets_passing_uc_5pct=("uc_p_value", lambda values: int((values >= 0.05).sum())),
-            assets_passing_cc_5pct=("cc_p_value", lambda values: int((values >= 0.05).sum())),
+            assets_passing_uc_5pct=(
+                "uc_p_value",
+                lambda values: int((values >= 0.05).sum()),
+            ),
+            assets_passing_cc_5pct=(
+                "cc_p_value",
+                lambda values: int((values >= 0.05).sum()),
+            ),
         )
         .sort_values(["alpha", "model"])
     )
@@ -93,7 +99,9 @@ def plot_model_comparison(summary: pd.DataFrame) -> None:
 
     fig, axis = plt.subplots(figsize=(12, 6.5), constrained_layout=True)
     for offset, alpha in [(-width / 2, 0.05), (width / 2, 0.01)]:
-        subset = chart_data.loc[np.isclose(chart_data["alpha"], alpha)].set_index("label")
+        subset = chart_data.loc[np.isclose(chart_data["alpha"], alpha)].set_index(
+            "label"
+        )
         values = subset.reindex(MODEL_ORDER)["violation_rate"].to_numpy() * 100.0
         axis.bar(
             positions + offset,
@@ -102,20 +110,27 @@ def plot_model_comparison(summary: pd.DataFrame) -> None:
             label=f"Nominal {alpha:.0%} tail",
             color=TAIL_COLORS[alpha],
         )
-        axis.axhline(alpha * 100.0, color=TAIL_COLORS[alpha], linestyle="--", linewidth=1.4)
+        axis.axhline(
+            alpha * 100.0, color=TAIL_COLORS[alpha], linestyle="--", linewidth=1.4
+        )
     axis.set_title("Observed VaR violation rate, 31 May to 29 December 2023")
     axis.set_ylabel("Violation rate (%)")
     axis.set_xticks(positions, MODEL_ORDER, rotation=18, ha="right")
     axis.legend(frameon=False)
     axis.grid(axis="y", alpha=0.25)
     fig.savefig(
-        IMAGE_DIR / "01_violation_rates.png", dpi=220, facecolor="white", bbox_inches="tight"
+        IMAGE_DIR / "01_violation_rates.png",
+        dpi=220,
+        facecolor="white",
+        bbox_inches="tight",
     )
     plt.close(fig)
 
     fig, axis = plt.subplots(figsize=(12, 6.5), constrained_layout=True)
     for offset, alpha in [(-width / 2, 0.05), (width / 2, 0.01)]:
-        subset = chart_data.loc[np.isclose(chart_data["alpha"], alpha)].set_index("label")
+        subset = chart_data.loc[np.isclose(chart_data["alpha"], alpha)].set_index(
+            "label"
+        )
         values = subset.reindex(MODEL_ORDER)["avg_quantile_loss"].to_numpy() * 10_000.0
         axis.bar(
             positions + offset,
@@ -130,7 +145,10 @@ def plot_model_comparison(summary: pd.DataFrame) -> None:
     axis.legend(frameon=False)
     axis.grid(axis="y", alpha=0.25)
     fig.savefig(
-        IMAGE_DIR / "02_quantile_loss.png", dpi=220, facecolor="white", bbox_inches="tight"
+        IMAGE_DIR / "02_quantile_loss.png",
+        dpi=220,
+        facecolor="white",
+        bbox_inches="tight",
     )
     plt.close(fig)
 
@@ -154,8 +172,16 @@ def plot_spy_path(path_data: pd.DataFrame) -> None:
     breaches = path_data["violation"].astype(str).str.lower().eq("true")
 
     fig, axis = plt.subplots(figsize=(13, 6.5), constrained_layout=True)
-    axis.plot(dates, realized, color="#8291a5", linewidth=1.1, label="SPY daily log return")
-    axis.plot(dates, lower_quantile, color="#18aaa3", linewidth=2.0, label="Adaptive conformal 5% quantile")
+    axis.plot(
+        dates, realized, color="#8291a5", linewidth=1.1, label="SPY daily log return"
+    )
+    axis.plot(
+        dates,
+        lower_quantile,
+        color="#18aaa3",
+        linewidth=2.0,
+        label="Adaptive conformal 5% quantile",
+    )
     axis.scatter(
         dates.loc[breaches],
         realized.loc[breaches],
@@ -173,7 +199,10 @@ def plot_spy_path(path_data: pd.DataFrame) -> None:
     axis.legend(frameon=False, ncol=3)
     axis.grid(alpha=0.2)
     fig.savefig(
-        IMAGE_DIR / "03_spy_forecast_path.png", dpi=220, facecolor="white", bbox_inches="tight"
+        IMAGE_DIR / "03_spy_forecast_path.png",
+        dpi=220,
+        facecolor="white",
+        bbox_inches="tight",
     )
     plt.close(fig)
 

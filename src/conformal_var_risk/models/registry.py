@@ -42,9 +42,7 @@ def build_model_factories(
             p=config.garch.p,
             q=config.garch.q,
             # Tie bootstrap draws to alpha so multi-alpha runs stay reproducible.
-            rng=np.random.default_rng(
-                config.run.seed + int(alpha * 100_000) + 17
-            ),
+            rng=np.random.default_rng(config.run.seed + int(alpha * 100_000) + 17),
         ),
         "conformal": lambda alpha: AdaptiveConformalVaRModel(
             window=config.conformal.window,

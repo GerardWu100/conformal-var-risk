@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-
 from conformal_var_risk.data.daily_panel import build_daily_log_return_panel
 from conformal_var_risk.data.raw_cache import load_raw_minute_bars
 from conformal_var_risk.data.realized_variance import (
@@ -119,10 +118,9 @@ def test_realized_variance_matches_hand_computation() -> None:
     jpm_intraday_r1 = np.log(50.5 / 50.0)
     jpm_intraday_r2 = np.log(51.0 / 50.5)
     expected_jpm_day1 = jpm_intraday_r1**2 + jpm_intraday_r2**2
-    expected_portfolio_day1 = (
-        (0.5 * (aapl_intraday_r1 + jpm_intraday_r1)) ** 2
-        + (0.5 * (aapl_intraday_r2 + jpm_intraday_r2)) ** 2
-    )
+    expected_portfolio_day1 = (0.5 * (aapl_intraday_r1 + jpm_intraday_r1)) ** 2 + (
+        0.5 * (aapl_intraday_r2 + jpm_intraday_r2)
+    ) ** 2
 
     assert realized_variance.loc[pd.Timestamp("2020-01-02"), "AAPL"] == pytest.approx(
         expected_aapl_day1
