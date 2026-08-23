@@ -8,7 +8,7 @@ categories: ["Quantitative Finance", "Risk Management"]
 
 A one-day Value at Risk forecast draws a boundary under tomorrow's return. If the model targets a 5% lower tail, roughly five returns in one hundred should fall below that boundary over a long, stable evaluation period. Too many crossings mean the model understates risk. Too few may look reassuring, but capital and trading limits become needlessly expensive when the boundary is too low.
 
-This project compares an adaptive conformal forecast with four standard market-risk models. Every model sees the same trailing returns and predicts the same dates. The conformal forecast produced fewer breaches in this sample, but it also had the worst quantile loss. That is the trade-off worth studying.
+I compared an adaptive conformal forecast with four standard market-risk models. Every model sees the same trailing returns and predicts the same dates. The conformal forecast produced fewer breaches in this sample, but it also had the worst quantile loss. Fewer breaches did not mean a better forecast.
 
 ## Defining the object being forecast
 
@@ -161,9 +161,9 @@ $$
 L_{\alpha}(r_t,q_t)=(\alpha-I_t)(r_t-q_t).
 $$
 
-The two cases show its economics. When $r_t\ge q_t$, $I_t=0$ and the cost is $\alpha(r_t-q_t)$. When $r_t<q_t$, the cost is $(1-\alpha)(q_t-r_t)$. A very low boundary avoids breaches but pays a small cost on nearly every ordinary day.
+The two cases explain the trade-off. When $r_t\ge q_t$, $I_t=0$ and the cost is $\alpha(r_t-q_t)$. When $r_t<q_t$, the cost is $(1-\alpha)(q_t-r_t)$. A very low boundary avoids breaches but pays a small cost on nearly every ordinary day.
 
-## Results: conservative, but not sharper
+## Conservative, but not sharper
 
 The 1,150-day calibration window leaves 153 forecasts per series, from 31 May through 29 December 2023. The pooled counts below combine four assets and the portfolio for a descriptive total of 765 forecasts. They are not 765 independent trials because the assets and portfolio share market shocks.
 
@@ -207,7 +207,7 @@ The learning rate also needs sensitivity analysis. At the 1% target, one quiet d
 
 Expected Shortfall (ES) is the mean loss conditional on entering the tail. The project reports it as a secondary empirical diagnostic, but the conformal score targets a quantile, not ES. No conformal ES guarantee follows from this construction.
 
-The result is useful precisely because it is not a win for the new method. Adaptive conformal VaR reduced violations during these 153 dates, then lost on quantile loss. With the sample this short, the defensible conclusion is narrower: the update changed the calibration-sharpness trade-off, and a longer evaluation is needed to decide whether the extra width pays for itself.
+I would not call this a win for the new method. Adaptive conformal VaR reduced violations during these 153 dates, then lost on quantile loss. With the sample this short, the conclusion has to stay narrow: the update changed the calibration-sharpness trade-off. A longer evaluation must show whether the extra width pays for itself.
 
 ## References
 

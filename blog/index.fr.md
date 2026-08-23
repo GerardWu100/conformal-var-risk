@@ -8,7 +8,7 @@ categories: ["Quantitative Finance", "Risk Management"]
 
 Une prévision de Value at Risk à un jour trace une borne sous le rendement de demain. Si le modèle vise une queue inférieure de 5 %, environ cinq rendements sur cent devraient franchir cette borne pendant une période d'évaluation longue et stable. Trop de franchissements indiquent une sous-estimation du risque. Trop peu peuvent sembler rassurants, mais une borne trop basse renchérit inutilement le capital et les limites de trading.
 
-Ce projet compare une prévision conforme adaptative à quatre modèles classiques de risque de marché. Tous reçoivent les mêmes rendements passés et prévoient les mêmes dates. La méthode conforme a produit moins de violations dans cet échantillon, mais aussi la pire perte quantile. C'est ce compromis qui mérite l'analyse.
+J'ai comparé une prévision conforme adaptative à quatre modèles classiques de risque de marché. Tous reçoivent les mêmes rendements passés et prévoient les mêmes dates. La méthode conforme a produit moins de violations dans cet échantillon, mais aussi la pire perte quantile. Moins de violations ne signifie donc pas une meilleure prévision.
 
 ## Définir l'objet prévu
 
@@ -161,9 +161,9 @@ $$
 L_{\alpha}(r_t,q_t)=(\alpha-I_t)(r_t-q_t).
 $$
 
-Les deux cas révèlent son sens économique. Lorsque $r_t\ge q_t$, $I_t=0$ et le coût vaut $\alpha(r_t-q_t)$. Lorsque $r_t<q_t$, il vaut $(1-\alpha)(q_t-r_t)$. Une borne très basse évite les violations, mais paie un petit coût pendant presque toutes les journées ordinaires.
+Les deux cas expliquent le compromis. Lorsque $r_t\ge q_t$, $I_t=0$ et le coût vaut $\alpha(r_t-q_t)$. Lorsque $r_t<q_t$, il vaut $(1-\alpha)(q_t-r_t)$. Une borne très basse évite les violations, mais paie un petit coût pendant presque toutes les journées ordinaires.
 
-## Résultats : prudente, mais moins précise
+## Prudente, mais moins précise
 
 La fenêtre de calibration de 1 150 jours laisse 153 prévisions par série, du 31 mai au 29 décembre 2023. Les comptes regroupés ci-dessous combinent quatre actifs et le portefeuille pour former un total descriptif de 765 prévisions. Il ne s'agit pas de 765 essais indépendants, puisque les actifs et le portefeuille partagent les mêmes chocs de marché.
 
@@ -207,7 +207,7 @@ Le taux d'apprentissage demande aussi une analyse de sensibilité. Pour la cible
 
 L'Expected Shortfall (ES) est la perte moyenne conditionnelle dans la queue. Le projet la rapporte comme diagnostic empirique secondaire, tandis que le score conforme cible un quantile, pas l'ES. Cette construction ne fournit aucune garantie conforme sur l'ES.
 
-Le résultat est instructif justement parce que la nouvelle méthode ne gagne pas partout. La VaR conforme adaptative réduit les violations sur ces 153 dates, puis perd sur la perte quantile. Avec un échantillon aussi court, la conclusion défendable reste modeste : la mise à jour a déplacé le compromis entre calibration et précision, et une évaluation plus longue doit déterminer si la largeur supplémentaire se justifie.
+Je ne considère pas ce résultat comme une victoire de la nouvelle méthode. La VaR conforme adaptative réduit les violations sur ces 153 dates, puis perd sur la perte quantile. Avec un échantillon aussi court, la conclusion doit rester modeste : la mise à jour a déplacé le compromis entre calibration et précision. Une évaluation plus longue doit montrer si la largeur supplémentaire se justifie.
 
 ## Références
 
