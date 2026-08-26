@@ -102,7 +102,3 @@ The pipeline writes derived parquet artifacts to `outputs/runs/`:
 - `feature_table.parquet`
 - `backtest_results.parquet`
 - `summary_metrics.parquet`
-
-## License
-
-All rights reserved. See [LICENSE](LICENSE).
